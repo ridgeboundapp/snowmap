@@ -7,6 +7,7 @@
 <meta name="keywords" content="Snow, Snow Depth, Snow Depth Map, Alpine, Map, Backpacking, Snowshoeing, Skiing, Backcountry">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="referrer" content="strict-origin-when-cross-origin">
+<script>try{var t=JSON.parse(localStorage.getItem('snowlookout.prefs.v1')||'{}').theme;if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t)}catch(e){}</script>
 <title>Snow Lookout – Snow Depth Map</title>
 <link rel="canonical" href="https://snowlookout.com/">
 <meta property="og:type" content="website">
@@ -51,7 +52,9 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Arvo:wght@400;700&display=swap">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
-  :root { --bg:#eef2f0; --panel:#fff; --ink:#1c2a22; --line:#d5ddd7; --forest:#2f5d3a; --header-h:56px; --footer-h:30px; --navy:#10466c; --frost:#a9c8de; --orange:#ff8a4c; }
+  :root { --bg:#eef2f0; --surface:#fff; --ink:#1c2a22; --ink-2:#10466c; --muted:#2d4f66; --line:#d5ddd7; --hover:#eef2f0; --accent-bg:#10466c; --accent-fg:#fff; --forest:#2f5d3a; --attr:rgba(255,255,255,.8); --icon-filter:none; --header-h:56px; --footer-h:30px; --navy:#10466c; --frost:#a9c8de; --orange:#ff8a4c; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg:#0e171d; --surface:#17232c; --ink:#e4ecef; --ink-2:#bcd6e8; --muted:#9db6c6; --line:#2b3b47; --hover:#213240; --accent-bg:#a9c8de; --accent-fg:#0b2a40; --forest:#a9c8de; --attr:rgba(23,35,44,.85); --icon-filter:invert(1); color-scheme: dark; } }
+  :root[data-theme="dark"] { --bg:#0e171d; --surface:#17232c; --ink:#e4ecef; --ink-2:#bcd6e8; --muted:#9db6c6; --line:#2b3b47; --hover:#213240; --accent-bg:#a9c8de; --accent-fg:#0b2a40; --forest:#a9c8de; --attr:rgba(23,35,44,.85); --icon-filter:invert(1); color-scheme: dark; }
   * { box-sizing: border-box; }
   html, body { height: 100%; margin: 0; }
   body { font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--ink); }
@@ -69,15 +72,15 @@
   #tip b { font-size: 18px; display: block; }
   #tip small { opacity: .8; display: block; word-break: break-word; }
   #search { position: relative; flex: 0 1 300px; min-width: 0; font-size: 14px; }
-  #search form { display: flex; background: #fff; border-radius: 4px; overflow: hidden; height: 34px; }
+  #search form { display: flex; background: var(--surface); border-radius: 4px; overflow: hidden; height: 34px; }
   #search input { flex: 1; min-width: 0; border: 0; padding: 0 10px; font: inherit; color: var(--ink); background: transparent; outline: none; }
   #search button { border: 0; background: transparent; width: 34px; cursor: pointer; font-size: 16px; color: var(--forest); }
   #search button:hover, #search button:focus-visible { background: var(--bg); outline: none; }
-  #results { position: absolute; top: 100%; right: 0; width: min(380px, calc(100vw - 32px)); z-index: 1200; list-style: none; margin: 6px 0 0; padding: 0; background: #fff; border-radius: 4px; box-shadow: 0 1px 5px rgba(0,0,0,.45); max-height: 260px; overflow-y: auto; display: none; }
-  #results li { padding: 8px 10px; cursor: pointer; border-bottom: 1px solid var(--line); line-height: 1.3; color: #10466c; }
+  #results { position: absolute; top: 100%; right: 0; width: min(380px, calc(100vw - 32px)); z-index: 1200; list-style: none; margin: 6px 0 0; padding: 0; background: var(--surface); border-radius: 4px; box-shadow: 0 1px 5px rgba(0,0,0,.45); max-height: 260px; overflow-y: auto; display: none; }
+  #results li { padding: 8px 10px; cursor: pointer; border-bottom: 1px solid var(--line); line-height: 1.3; color: var(--ink-2); }
   #results li:last-child { border-bottom: 0; }
   #results li:hover, #results li:focus-visible { background: var(--bg); outline: none; }
-  #results li.note { cursor: default; color: #10466c; opacity: .75; }
+  #results li.note { cursor: default; color: var(--ink-2); opacity: .75; }
   /* footer: when NOAA's map could last have updated */
   footer { position: fixed; z-index: 1000; left: 0; right: 0; bottom: 0; height: var(--footer-h); background: var(--navy); color: var(--frost); font-size: 12.5px; line-height: var(--footer-h); padding: 0 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; }
   footer b { color: #fff; font-weight: 600; }
@@ -88,17 +91,20 @@
   .menu-btn:hover { background: rgba(255,255,255,.12); }
   .menu-btn:focus-visible { outline: 2px solid var(--frost); outline-offset: 1px; }
   .menu-btn svg { width: 24px; height: 24px; stroke: currentColor; stroke-width: 2; stroke-linecap: round; fill: none; }
-  #menu { position: absolute; top: 100%; left: 0; min-width: 210px; background: #fff; border-radius: 0 0 8px 0; box-shadow: 0 4px 14px rgba(0,0,0,.35); padding: 6px 0; }
+  #menu { position: absolute; top: 100%; left: 0; min-width: 210px; background: var(--surface); border-radius: 0 0 8px 0; box-shadow: 0 4px 14px rgba(0,0,0,.35); padding: 6px 0; }
   #menu[hidden] { display: none; }
-  #menu a { display: block; padding: 14px 20px; color: var(--navy); font-family: Arvo, Georgia, "Times New Roman", serif; font-size: 16px; text-decoration: none; }
+  #menu a { display: block; padding: 14px 20px; color: var(--ink-2); font-family: Arvo, Georgia, "Times New Roman", serif; font-size: 16px; text-decoration: none; }
   #menu a:hover, #menu a:focus-visible { background: var(--bg); outline: none; }
   #menu a[aria-current="page"] { font-weight: 700; }
+  .menu-sep { height: 1px; background: var(--line); margin: 6px 0; }
+  #menu button { display: block; width: 100%; text-align: left; background: none; border: 0; padding: 14px 20px; color: var(--ink-2); font: 15px Arvo, Georgia, "Times New Roman", serif; cursor: pointer; }
+  #menu button:hover, #menu button:focus-visible { background: var(--hover); outline: none; }
   #search { margin-left: auto; }
 
   /* map buttons: my location, saved places, color key */
-  .sl-ctl a { display: flex !important; align-items: center; justify-content: center; color: var(--navy); cursor: pointer; }
+  .sl-ctl a { display: flex !important; align-items: center; justify-content: center; color: var(--ink-2); cursor: pointer; }
   .sl-ctl a svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-  .sl-ctl a.on { background: var(--navy); color: #fff; }
+  .sl-ctl a.on, .sl-ctl a.on:hover { background-color: var(--accent-bg); color: var(--accent-fg); }
   .sl-ctl a.busy { opacity: .5; }
   @media (pointer: coarse) {
     .leaflet-bar a, .leaflet-touch .leaflet-bar a { width: 42px; height: 42px; line-height: 42px; }
@@ -110,28 +116,30 @@
   }
 
   /* panels (saved places, color key) */
-  .panel { position: fixed; z-index: 1050; left: 64px; top: calc(var(--header-h) + 10px); width: min(320px, calc(100vw - 78px)); max-height: calc(100% - var(--header-h) - var(--footer-h) - 24px); overflow: auto; background: #fff; border-radius: 8px; box-shadow: 0 2px 12px rgba(0,0,0,.35); padding: 12px 14px; color: var(--navy); }
+  .panel { position: fixed; z-index: 1050; left: 64px; top: calc(var(--header-h) + 10px); width: min(320px, calc(100vw - 78px)); max-height: calc(100% - var(--header-h) - var(--footer-h) - 24px); overflow: auto; background: var(--surface); border-radius: 8px; box-shadow: 0 2px 12px rgba(0,0,0,.35); padding: 12px 14px; color: var(--ink-2); }
   .panel[hidden], #card[hidden], #toast[hidden] { display: none; }
   .panel h2 { margin: 0 0 8px; font: 700 15px Arvo, Georgia, "Times New Roman", serif; }
-  .panel .empty { margin: 0; color: #33566f; font-size: 14px; }
+  .panel .empty { margin: 0; color: var(--muted); font-size: 14px; }
   .saved-row { display: flex; align-items: center; gap: 6px; border-bottom: 1px solid var(--line); }
   .saved-row:last-child { border-bottom: 0; }
-  .saved-go { flex: 1; min-width: 0; text-align: left; background: none; border: 0; padding: 10px 4px; font: inherit; color: var(--navy); cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .saved-go { flex: 1; min-width: 0; text-align: left; background: none; border: 0; padding: 10px 4px; font: inherit; color: var(--ink-2); cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .saved-go small { display: block; opacity: .7; font-size: 12px; }
-  .saved-del { flex: none; width: 40px; height: 40px; background: none; border: 0; font-size: 22px; line-height: 1; color: #6b7f8c; cursor: pointer; }
+  .saved-del { flex: none; width: 40px; height: 40px; background: none; border: 0; font-size: 22px; line-height: 1; color: var(--muted); cursor: pointer; }
 
   /* selected spot card (bottom sheet on phones) */
-  #card { position: fixed; z-index: 1060; left: 12px; bottom: calc(var(--footer-h) + 14px); width: min(340px, calc(100vw - 24px)); background: #fff; color: var(--navy); border-radius: 10px; box-shadow: 0 2px 14px rgba(0,0,0,.4); padding: 14px 16px; }
+  #card { position: fixed; z-index: 1060; left: 12px; bottom: calc(var(--footer-h) + 14px); width: min(340px, calc(100vw - 24px)); background: var(--surface); color: var(--ink-2); border-radius: 10px; box-shadow: 0 2px 14px rgba(0,0,0,.4); padding: 14px 16px; }
   #cardTitle { font: 700 14px/1.3 Arvo, Georgia, "Times New Roman", serif; padding-right: 36px; word-break: break-word; }
   #cardDepth { font: 700 30px/1.15 Arvo, Georgia, "Times New Roman", serif; margin: 6px 0 2px; }
   .wx-icon { font-size: 20px; margin-right: 6px; vertical-align: -2px; }
-  #cardTemp { font-weight: 600; color: var(--navy) !important; font-size: 15px !important; }
-  #card .line { font-size: 14px; color: #2d4f66; margin: 2px 0; word-break: break-word; }
+  #cardTemp { font-weight: 600; color: var(--ink-2) !important; font-size: 15px !important; }
+  #cardSnowFc { font-size: 14px; }
+  .alink { display: inline-block; margin-top: 10px; color: var(--ink-2); font-size: 14px; }
+  #card .line { font-size: 14px; color: var(--muted); margin: 2px 0; word-break: break-word; }
   #card .actions { display: flex; gap: 8px; margin-top: 12px; }
-  #card .actions button { flex: 1; min-height: 44px; border-radius: 8px; border: 1px solid var(--navy); background: #fff; color: var(--navy); font: inherit; font-size: 15px; cursor: pointer; }
-  #card .actions button[aria-pressed="true"] { background: var(--navy); color: #fff; }
-  #cardClose { position: absolute; top: 6px; right: 6px; width: 40px; height: 40px; border: 0; background: none; font-size: 26px; line-height: 1; color: var(--navy); cursor: pointer; }
-  #card button:focus-visible, .panel button:focus-visible, .sl-ctl a:focus-visible { outline: 2px solid var(--navy); outline-offset: 2px; }
+  #card .actions button { flex: 1; min-height: 44px; border-radius: 8px; border: 1px solid var(--ink-2); background: var(--surface); color: var(--ink-2); font: inherit; font-size: 15px; cursor: pointer; }
+  #card .actions button[aria-pressed="true"] { background: var(--accent-bg); color: var(--accent-fg); }
+  #cardClose { position: absolute; top: 6px; right: 6px; width: 40px; height: 40px; border: 0; background: none; font-size: 26px; line-height: 1; color: var(--ink-2); cursor: pointer; }
+  #card button:focus-visible, .panel button:focus-visible, .sl-ctl a:focus-visible, .alink:focus-visible { outline: 2px solid var(--ink-2); outline-offset: 2px; }
   @media (max-width: 600px) {
     #card { left: 0; right: 0; bottom: var(--footer-h); width: auto; border-radius: 14px 14px 0 0; }
   }
@@ -152,6 +160,24 @@
     #toast { top: calc(var(--header-h) + 8px); }
   }
   #toast { position: fixed; z-index: 1300; left: 50%; top: calc(var(--header-h) + 48px); transform: translateX(-50%); background: rgba(20,32,25,.95); color: #fff; padding: 9px 14px; border-radius: 8px; font-size: 14px; max-width: calc(100vw - 32px); text-align: center; }
+  /* Leaflet's own controls follow the theme */
+  .leaflet-container { background: var(--bg); }
+  .leaflet-bar a { background-color: var(--surface); color: var(--ink-2); border-bottom-color: var(--line); }
+  .leaflet-bar a:hover, .leaflet-bar a:focus { background-color: var(--hover); }
+  .leaflet-bar a.leaflet-disabled { background-color: var(--hover); color: var(--muted); }
+  .leaflet-control-layers { background: var(--surface); color: var(--ink); }
+  .leaflet-control-layers-toggle { filter: var(--icon-filter); }
+  .leaflet-control-attribution { background: var(--attr) !important; color: var(--muted); }
+  .leaflet-control-attribution a { color: var(--ink-2); }
+  /* snow layer panel */
+  .panel label.opt { display: flex; align-items: center; gap: 10px; padding: 9px 2px; font-size: 15px; cursor: pointer; }
+  .panel input[type=radio], .panel input[type=range] { accent-color: var(--accent-bg); }
+  .panel input[type=radio] { width: 18px; height: 18px; margin: 0; }
+  .opacity { margin-top: 8px; padding-top: 10px; border-top: 1px solid var(--line); }
+  .opacity label { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 6px; }
+  .opacity input { width: 100%; }
+  .hint { margin: 10px 0 6px; color: var(--muted); font-size: 13px; }
+  #sweLegend img { display: block; background: #fff; border-radius: 6px; padding: 4px; max-width: 100%; height: auto; }
   .sl-pin { background: none; border: 0; }
   .sl-pin svg { display: block; filter: drop-shadow(0 1px 2px rgba(0,0,0,.45)); }
   @media (max-width: 480px) { header { gap: 8px; padding: 0 12px; } header .name { font-size: 17px; } header .tagline { font-size: 11px; } .brand { gap: 8px; } }
@@ -161,7 +187,7 @@
 <h1 class="sr-only">Snow Lookout: interactive snow depth map</h1>
 <header>
   <button class="menu-btn" id="menuBtn" type="button" aria-label="Menu" aria-expanded="false" aria-controls="menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
-  <nav id="menu" aria-label="Pages" hidden><a href="./" aria-current="page">Map</a><a href="about.html">About</a></nav>
+  <nav id="menu" aria-label="Pages" hidden><a href="./" aria-current="page">Map</a><a href="about.html">About</a><div class="menu-sep" role="separator"></div><button type="button" id="unitsBtn"></button><button type="button" id="themeBtn"></button></nav>
   <a class="brand" href="https://snowlookout.com" aria-label="Snow Lookout home">
     <svg aria-hidden="true" viewBox="20 10 120 148" width="34" height="42"><path d="M80 152 C80 152 26 104 26 70 A54 54 0 1 1 134 70 C134 104 80 152 80 152 Z" fill="#a9c8de"/><circle cx="80" cy="70" r="40" fill="#10466c"/><clipPath id="pinclip"><circle cx="80" cy="70" r="40"/></clipPath><g clip-path="url(#pinclip)"><polygon points="98,58 130,112 66,112" fill="#5f8fb0"/><polygon points="72,34 112,112 32,112" fill="#fff"/><polygon points="72,34 92,72 82,66 72,76 62,66 52,72" fill="#a9c8de"/><polygon points="72,34 80,50 76,47 72,53 68,47 64,50" fill="#fff"/></g><circle cx="106" cy="44" r="7" fill="#ff8a4c"/></svg>
     <div>
@@ -187,6 +213,7 @@
   <div id="cardTitle"></div>
   <div id="cardDepth" aria-live="polite"></div>
   <div class="line" id="cardTemp"></div>
+  <div class="line" id="cardSnowFc" hidden></div>
   <div class="line" id="cardNote" hidden></div>
   <div class="line" id="cardElev"></div>
   <div class="line" id="cardCoords"></div>
@@ -194,11 +221,27 @@
     <button id="saveBtn" type="button" aria-pressed="false">&#9734; Save place</button>
     <button id="shareBtn" type="button">Share</button>
   </div>
+  <a class="alink" id="avyLink" href="https://avalanche.org/" target="_blank" rel="noopener">Avalanche forecast &#8599;</a>
 </section>
 
 <section id="savedPanel" class="panel" aria-label="Saved places" hidden>
   <h2>Saved places</h2>
   <div id="savedList"></div>
+</section>
+
+<section id="snowPanel" class="panel" aria-label="Snow layer" hidden>
+  <h2>Snow layer</h2>
+  <label class="opt"><input type="radio" name="snowLayer" value="depth" checked> Snow depth</label>
+  <label class="opt"><input type="radio" name="snowLayer" value="swe"> Snow water equivalent</label>
+  <label class="opt"><input type="radio" name="snowLayer" value="off"> Off</label>
+  <div class="opacity">
+    <label for="opacity"><span>Opacity</span><output id="opacityOut" for="opacity">80%</output></label>
+    <input type="range" id="opacity" min="10" max="100" step="5" value="80">
+  </div>
+  <div id="sweLegend" hidden>
+    <p class="hint">Snow water equivalent is how much water the snow would give if it melted. Hovering or tapping the map always reports snow depth. NOAA's color key:</p>
+    <img id="sweLegendImg" alt="NOAA color key for snow water equivalent">
+  </div>
 </section>
 
 <div id="toast" role="status" hidden></div>
@@ -233,6 +276,20 @@
   // How the card shows temperatures. 'long':  \u26c5 52\u00b0F \u00b7 High 61\u00b0F \u00b7 Low 38\u00b0F    'short':  \u26c5 52\u00b0F  \u219161\u00b0 \u219338\u00b0
   var TEMP_STYLE = 'long';
 
+  // Visitor preferences, shared with the other pages: units ('imperial' | 'metric') and theme ('auto' | 'light' | 'dark').
+  var PREF_KEY = 'snowlookout.prefs.v1';
+  var prefs = (function () {
+    try {
+      var p = JSON.parse(localStorage.getItem(PREF_KEY) || '{}');
+      return { units: p.units === 'metric' ? 'metric' : 'imperial', theme: (p.theme === 'light' || p.theme === 'dark') ? p.theme : 'auto' };
+    } catch (e) { return { units: 'imperial', theme: 'auto' }; }
+  })();
+  function savePrefs() { try { localStorage.setItem(PREF_KEY, JSON.stringify(prefs)); } catch (e) {} }
+  function applyTheme() {
+    if (prefs.theme === 'auto') document.documentElement.removeAttribute('data-theme');
+    else document.documentElement.setAttribute('data-theme', prefs.theme);
+  }
+
   // <pure>
   function num(v) { var n = parseFloat(v); return isFinite(n) ? n : null; }
 
@@ -253,7 +310,10 @@
       } else if (k === 'b') {
         if (/^[a-z]{2,12}$/.test(v)) out.b = v;
       } else if (k === 's') {
-        out.s = v === '0' ? 0 : 1;
+        out.s = v === '0' ? 'off' : v === 'w' ? 'swe' : 'depth';
+      } else if (k === 'o') {
+        var o = num(v);
+        if (o !== null && o >= 10 && o <= 100) out.o = Math.round(o);
       } else if (k === 'n') {
         out.n = v.slice(0, 80);
       }
@@ -266,7 +326,8 @@
     p.push('z=' + (Math.round(s.z * 100) / 100));
     p.push('c=' + s.c[0].toFixed(4) + ',' + s.c[1].toFixed(4));
     if (s.b) p.push('b=' + s.b);
-    if (s.s === 0) p.push('s=0');
+    if (s.s === 'off') p.push('s=0'); else if (s.s === 'swe') p.push('s=w');
+    if (s.o != null && s.o !== 80) p.push('o=' + s.o);
     if (s.p) {
       p.push('p=' + s.p[0].toFixed(5) + ',' + s.p[1].toFixed(5));
       if (s.n) p.push('n=' + encodeURIComponent(String(s.n).slice(0, 60)));
@@ -274,15 +335,65 @@
     return '#' + p.join('&');
   }
 
-  function fmtDepth(raw, unit) {
+  // system: 'imperial' (in, ft, °F) or 'metric' (cm, m, °C)
+  function fmtDepth(raw, unit, system) {
     var inches = unit === 'm' ? raw * 39.3701 : unit === 'mm' ? raw / 25.4 : raw;
     if (inches < 0.05) return 'No snow';
+    if (system === 'metric') {
+      var cm = inches * 2.54;
+      if (cm > 100) return (cm / 100).toFixed(1) + ' m';
+      return (cm < 10 ? cm.toFixed(1) : String(Math.round(cm))) + ' cm';
+    }
     if (inches > 24) return (inches / 12).toFixed(1) + ' ft';
     return (inches < 10 ? inches.toFixed(1) : String(Math.round(inches))) + ' in';
   }
 
-  function fmtElev(ft) {
-    return Math.round(ft).toLocaleString('en-US') + ' ft (' + Math.round(ft * 0.3048).toLocaleString('en-US') + ' m)';
+  function fmtElev(ft, system) {
+    return system === 'metric'
+      ? Math.round(ft * 0.3048).toLocaleString('en-US') + ' m'
+      : Math.round(ft).toLocaleString('en-US') + ' ft';
+  }
+
+  function tempIn(f, system) { return system === 'metric' ? Math.round((f - 32) * 5 / 9) : f; }
+
+  // ISO 8601 duration such as PT6H, PT1H, P1D or P1DT6H -> hours (null if unreadable).
+  function parseDurHours(d) {
+    var m = /^P(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?)?$/.exec(String(d || ''));
+    if (!m) return null;
+    var h = (+m[1] || 0) * 24 + (+m[2] || 0) + (+m[3] || 0) / 60;
+    return h > 0 ? h : null;
+  }
+
+  // NWS gridpoint snowfall: a list of { validTime: "start/PT6H", value: mm }. Total mm from nowMs to nowMs + hours,
+  // counting only the part of each period that falls inside that window.
+  function sumSnowfall(values, nowMs, hours) {
+    var end = nowMs + hours * 36e5, total = 0;
+    (values || []).forEach(function (v) {
+      if (!v || v.value == null || !isFinite(v.value)) return;
+      var parts = String(v.validTime || '').split('/');
+      var start = Date.parse(parts[0]), dur = parseDurHours(parts[1]);
+      if (!isFinite(start) || dur === null) return;
+      var len = dur * 36e5, overlap = Math.min(start + len, end) - Math.max(start, nowMs);
+      if (overlap > 0) total += v.value * (overlap / len);
+    });
+    return total;
+  }
+  function summarizeSnow(grid, nowMs) {
+    var sf = grid && grid.snowfallAmount;
+    if (!sf || !Array.isArray(sf.values) || !sf.values.length) return null;
+    var k = /inch|\bin\b/i.test(String(sf.uom || '')) ? 25.4 : 1;   // NWS reports millimetres
+    return { h24: sumSnowfall(sf.values, nowMs, 24) * k, h72: sumSnowfall(sf.values, nowMs, 72) * k };
+  }
+  function fmtSnowAmt(mm, system) {
+    var v = system === 'metric' ? mm / 10 : mm / 25.4;
+    var unit = system === 'metric' ? ' cm' : ' in';
+    if (v < 0.05) return '0' + unit;
+    return (v < 10 ? v.toFixed(1) : String(Math.round(v))) + unit;
+  }
+  function fmtSnowForecast(sn, system) {
+    if (!sn) return '';
+    if (sn.h72 / 25.4 < 0.05) return 'No snow expected in the next 3 days';
+    return 'Snow forecast: ' + fmtSnowAmt(sn.h24, system) + ' next 24 h · ' + fmtSnowAmt(sn.h72, system) + ' next 3 days';
   }
 
   // NOAA refreshes the snow analysis at 01, 05, 11 and 17 UTC. This is the most recent of those
@@ -371,21 +482,23 @@
     return w;
   }
   // style 'long':  52°F · High 61°F · Low 38°F      style 'short':  52°F  ↑61° ↓38°
-  // With a weather icon in front, "Now" is dropped.
-  function fmtTemp(w, style) {
+  // With a weather icon in front, "Now" is dropped. system: 'imperial' (°F) or 'metric' (°C).
+  function fmtTemp(w, style, system) {
     if (w.now === null && w.high === null && w.low === null) return 'Temperature: unavailable';
-    var now = w.now === null ? null : (w.icon ? '' : 'Now ') + w.now + '\u00b0F';
+    var deg = system === 'metric' ? '°C' : '°F';
+    var now = w.now === null ? null : (w.icon ? '' : 'Now ') + tempIn(w.now, system) + deg;
+    var hi = w.high === null ? null : tempIn(w.high, system), lo = w.low === null ? null : tempIn(w.low, system);
     if (style === 'short') {
       var hl = [];
-      if (w.high !== null) hl.push('\u2191' + w.high + '\u00b0' + (w.highDayShort ? ' ' + w.highDayShort : ''));
-      if (w.low !== null) hl.push('\u2193' + w.low + '\u00b0');
+      if (hi !== null) hl.push('↑' + hi + '°' + (w.highDayShort ? ' ' + w.highDayShort : ''));
+      if (lo !== null) hl.push('↓' + lo + '°');
       return [now, hl.join(' ')].filter(Boolean).join('  ');
     }
     var parts = [];
     if (now) parts.push(now);
-    if (w.high !== null) parts.push('High ' + w.high + '\u00b0F' + (w.highDay ? ' (' + w.highDay + ')' : ''));
-    if (w.low !== null) parts.push('Low ' + w.low + '\u00b0F');
-    return parts.join(' \u00b7 ');
+    if (hi !== null) parts.push('High ' + hi + deg + (w.highDay ? ' (' + w.highDay + ')' : ''));
+    if (lo !== null) parts.push('Low ' + lo + deg);
+    return parts.join(' · ');
   }
 
   function sameSpot(a, b) { return Math.abs(a.lat - b.lat) < 0.0006 && Math.abs(a.lng - b.lng) < 0.0006; }
@@ -427,13 +540,41 @@
   var currentBaseKey = startDef.key;
   startDef.layer.addTo(map);
 
-  var snow = L.tileLayer.wms(WMS, {
-    layers: '5', format: 'image/png', transparent: true, version: '1.1.1', opacity: 0.8, zIndex: 10,
-    attribution: 'Snow depth: NOAA / NWS / NOHRSC'
-  });
-  if (startHash.s !== 0) snow.addTo(map);
+  // NOAA's service has two maps: snow depth (WMS layer 5) and snow water equivalent (WMS layer 1).
+  function snowWms(layer, label) {
+    return L.tileLayer.wms(WMS, {
+      layers: layer, format: 'image/png', transparent: true, version: '1.1.1', opacity: 0.8, zIndex: 10,
+      attribution: label + ': NOAA / NWS / NOHRSC'
+    });
+  }
+  var snowDepth = snowWms('5', 'Snow depth'), snowSwe = snowWms('1', 'Snow water equivalent');
+  var snowMode = 'depth', snowOpacity = 80;
 
-  L.control.layers(baseLabels, { 'Snow depth': snow }, { position: 'topright', collapsed: true }).addTo(map);
+  function syncSnowUI() {
+    Array.prototype.forEach.call(document.querySelectorAll('input[name=snowLayer]'), function (r) { r.checked = r.value === snowMode; });
+    qs('opacity').value = snowOpacity;
+    qs('opacityOut').textContent = snowOpacity + '%';
+    var legend = qs('sweLegend');
+    legend.hidden = snowMode !== 'swe';
+    var img = qs('sweLegendImg');
+    if (snowMode === 'swe' && !img.getAttribute('src')) img.src = WMS + '?request=GetLegendGraphic&version=1.3.0&format=image/png&layer=1';
+  }
+  function setSnow(mode) {
+    snowMode = mode;
+    [snowDepth, snowSwe].forEach(function (l) { if (map.hasLayer(l)) map.removeLayer(l); });
+    if (mode === 'depth') snowDepth.addTo(map); else if (mode === 'swe') snowSwe.addTo(map);
+    syncSnowUI();
+  }
+  function setSnowOpacity(pct) {
+    snowOpacity = pct;
+    snowDepth.setOpacity(pct / 100); snowSwe.setOpacity(pct / 100);
+    syncSnowUI();
+  }
+
+  L.control.layers(baseLabels, {}, { position: 'topright', collapsed: true }).addTo(map);
+
+  setSnowOpacity(startHash.o != null ? startHash.o : 80);
+  setSnow(startHash.s || 'depth');
 
   // ---- small helpers --------------------------------------------------------
   var toastTimer = null;
@@ -457,7 +598,7 @@
   var elevCache = {};
   function fetchElevation(ll, signal, done) {
     var key = ll.lat.toFixed(3) + ',' + ll.lng.toFixed(3);
-    if (elevCache[key] != null) { done(fmtElev(elevCache[key])); return; }
+    if (elevCache[key] != null) { done(elevCache[key]); return; }
     var usgs = fetch('https://epqs.nationalmap.gov/v1/json?x=' + ll.lng.toFixed(5) + '&y=' + ll.lat.toFixed(5) +
         '&wkid=4326&units=Feet&includeDate=false', { signal: signal })
       .then(function (r) { if (!r.ok) throw new Error('usgs'); return r.json(); })
@@ -467,9 +608,9 @@
       .then(function (d) { return d.elevation[0] * 3.28084; });
     Promise.any([usgs, meteo]).then(function (ft) {
       elevCache[key] = ft;
-      if (!signal.aborted) done(fmtElev(ft));
+      if (!signal.aborted) done(ft);
     }).catch(function () {
-      if (!signal.aborted) done('unavailable');
+      if (!signal.aborted) done(null);
     });
   }
 
@@ -486,11 +627,13 @@
         var p = pt.properties;
         return Promise.all([
           fetch(p.forecast, { signal: signal }).then(json),
-          fetch(p.forecastHourly, { signal: signal }).then(json)
+          fetch(p.forecastHourly, { signal: signal }).then(json),
+          p.forecastGridData ? fetch(p.forecastGridData, { signal: signal }).then(json).catch(function (e) { if (e.name === 'AbortError') throw e; return null; }) : null
         ]);
       })
       .then(function (r) {
         var w = summarizeWeather(r[0].properties && r[0].properties.periods, r[1].properties && r[1].properties.periods);
+        w.snow = summarizeSnow(r[2] && r[2].properties, Date.now());
         wxCache[key] = { t: Date.now(), w: w };
         if (!signal.aborted) done(w);
       })
@@ -533,11 +676,16 @@
   }
 
   // Calls cb(state) each time something new is known: depth, then elevation (in either order).
+  // The state holds raw numbers (depth in source units, elevation in feet) and is formatted when drawn.
   function lookup(ll, signal, cb, withWeather) {
-    var s = { head: null, note: '', elev: null, temp: null, coords: ll.lat.toFixed(3) + ', ' + ll.lng.toFixed(3) };
+    var s = { head: null, raw: null, note: '', elevFt: null, elevFail: false, temp: null, coords: ll.lat.toFixed(3) + ', ' + ll.lng.toFixed(3) };
     cb(s);
     if (withWeather) fetchWeather(ll, signal, function (t) { if (signal.aborted) return; s.temp = t; cb(s); });
-    fetchElevation(ll, signal, function (t) { if (signal.aborted) return; s.elev = t; cb(s); });
+    fetchElevation(ll, signal, function (ft) {
+      if (signal.aborted) return;
+      if (ft == null) s.elevFail = true; else s.elevFt = ft;
+      cb(s);
+    });
     var tries = working ? [working] : LAYER_OPTIONS;
     (function next(i) {
       if (i >= tries.length) {
@@ -551,7 +699,7 @@
         var hit = pickValue(d);
         if (!hit) return next(i + 1);
         working = tries[i];
-        s.head = fmtDepth(hit.raw, SOURCE_UNIT);
+        s.raw = hit.raw;
         cb(s);
       }).catch(function (e) {
         if (e.name === 'AbortError' || signal.aborted) return;
@@ -560,6 +708,8 @@
       });
     })(0);
   }
+  function headText(s) { return s.raw != null ? fmtDepth(s.raw, SOURCE_UNIT, prefs.units) : s.head; }
+  function elevText(s) { return s.elevFt != null ? fmtElev(s.elevFt, prefs.units) : s.elevFail ? 'unavailable' : 'reading…'; }
 
   // ---- hover tooltip (mouse only) -------------------------------------------
   var tip = qs('tip');
@@ -577,8 +727,8 @@
     tip.style.top = top + 'px';
   }
   function tipHtml(s) {
-    return '<b>' + esc(s.head || 'Reading…') + '</b>' + (s.note ? '<small>' + esc(s.note) + '</small>' : '') +
-      '<small>Elevation: ' + esc(s.elev || 'reading…') + '</small><small>' + esc(s.coords) + '</small>';
+    return '<b>' + esc(headText(s) || 'Reading…') + '</b>' + (s.note ? '<small>' + esc(s.note) + '</small>' : '') +
+      '<small>Elevation: ' + esc(elevText(s)) + '</small><small>' + esc(s.coords) + '</small>';
   }
   function hideTip() {
     clearTimeout(hTimer); if (hCtrl) hCtrl.abort();
@@ -586,6 +736,9 @@
   }
   if (canHover) {
     map.on('mousemove', function (e) {
+      // no snow readout while the pointer is over the map's own buttons and menus (layer switcher, zoom, ...)
+      var tg = e.originalEvent.target;
+      if (tg && tg.closest && tg.closest('.leaflet-control')) { hideTip(); return; }
       var x = e.originalEvent.clientX, y = e.originalEvent.clientY;
       lastX = x; lastY = y;
       spot.setLatLng(e.latlng).addTo(map);
@@ -620,15 +773,23 @@
       ic.setAttribute('role', 'img'); ic.setAttribute('aria-label', w.desc || 'Current weather');
       el.appendChild(ic);
     }
-    el.appendChild(document.createTextNode(fmtTemp(w, TEMP_STYLE)));
+    el.appendChild(document.createTextNode(fmtTemp(w, TEMP_STYLE, prefs.units)));
+  }
+  function renderSnowFc(w) {
+    var el = qs('cardSnowFc');
+    var text = w && typeof w === 'object' && w.snow ? fmtSnowForecast(w.snow, prefs.units) : '';
+    el.textContent = text; el.hidden = !text;
   }
 
+  var lastCardState = null;
   function renderCard(s) {
-    qs('cardDepth').textContent = s.head || 'Reading snow depth…';
+    lastCardState = s;
+    qs('cardDepth').textContent = headText(s) || 'Reading snow depth…';
     var note = qs('cardNote');
     note.textContent = s.note; note.hidden = !s.note;
     renderTemp(s.temp);
-    qs('cardElev').textContent = 'Elevation: ' + (s.elev || 'reading…');
+    renderSnowFc(s.temp);
+    qs('cardElev').textContent = 'Elevation: ' + elevText(s);
     qs('cardCoords').textContent = s.coords;
   }
 
@@ -818,7 +979,7 @@
   var hashTimer = null, lastHash = '', applying = false;
   function currentState() {
     var c = map.getCenter();
-    return { z: map.getZoom(), c: [c.lat, c.lng], b: currentBaseKey, s: map.hasLayer(snow) ? 1 : 0,
+    return { z: map.getZoom(), c: [c.lat, c.lng], b: currentBaseKey, s: snowMode, o: snowOpacity,
              p: selLL ? [selLL.lat, selLL.lng] : null, n: selTitle };
   }
   function writeHash() {
@@ -836,7 +997,6 @@
     baseDefs.forEach(function (d) { if (d.layer === e.layer) currentBaseKey = d.key; });
     scheduleHash();
   });
-  map.on('overlayadd overlayremove', scheduleHash);
 
   function applyHash(h) {
     applying = true;
@@ -846,8 +1006,8 @@
       baseByKey[h.b].layer.addTo(map);
       currentBaseKey = h.b;
     }
-    if (h.s === 0 && map.hasLayer(snow)) map.removeLayer(snow);
-    if (h.s !== 0 && !map.hasLayer(snow)) snow.addTo(map);
+    setSnowOpacity(h.o != null ? h.o : 80);
+    setSnow(h.s || 'depth');
     applying = false;
     if (h.p) select(L.latLng(h.p[0], h.p[1]), h.n || null);
     else if (selLL) closeCard();
@@ -876,18 +1036,18 @@
     return ctl.getContainer().querySelector('a');
   }
 
-  var savedPanel = qs('savedPanel');
-  var locateBtn, savedBtn;
+  var savedPanel = qs('savedPanel'), snowPanel = qs('snowPanel');
+  var locateBtn, savedBtn, snowBtn;
   function closePanels() {
-    savedPanel.hidden = true;
-    if (savedBtn) { savedBtn.classList.remove('on'); savedBtn.setAttribute('aria-expanded', 'false'); }
+    savedPanel.hidden = true; snowPanel.hidden = true;
+    [savedBtn, snowBtn].forEach(function (b) { if (b) { b.classList.remove('on'); b.setAttribute('aria-expanded', 'false'); } });
   }
-  function toggleSaved() {
-    var willOpen = savedPanel.hidden;
+  function togglePanel(panel, btn, onOpen) {
+    var willOpen = panel.hidden;
     closePanels();
     if (!willOpen) return;
-    savedPanel.hidden = false; savedBtn.classList.add('on'); savedBtn.setAttribute('aria-expanded', 'true');
-    renderSaved();
+    panel.hidden = false; btn.classList.add('on'); btn.setAttribute('aria-expanded', 'true');
+    if (onOpen) onOpen();
   }
 
   function locate(btn) {
@@ -907,8 +1067,16 @@
   locateBtn = makeControl('sl-locate', 'Show my location',
     '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="1.5"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>', locate);
   savedBtn = makeControl('sl-saved', 'Saved places',
-    '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/></svg>', toggleSaved);
-  savedBtn.setAttribute('aria-expanded', 'false');
+    '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/></svg>', function () { togglePanel(savedPanel, savedBtn, renderSaved); });
+  snowBtn = makeControl('sl-snow', 'Snow layer',
+    '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2v20M4.2 7l15.6 10M19.8 7L4.2 17"/><path d="M9.5 3.8L12 6.3l2.5-2.5M9.5 20.2L12 17.7l2.5 2.5"/></svg>', function () { togglePanel(snowPanel, snowBtn); });
+  savedBtn.setAttribute('aria-expanded', 'false'); snowBtn.setAttribute('aria-expanded', 'false');
+
+  Array.prototype.forEach.call(document.querySelectorAll('input[name=snowLayer]'), function (r) {
+    r.addEventListener('change', function () { if (r.checked) { setSnow(r.value); scheduleHash(); } });
+  });
+  qs('opacity').addEventListener('input', function (e) { setSnowOpacity(parseInt(e.target.value, 10)); });
+  qs('opacity').addEventListener('change', scheduleHash);
 
   // tapping or clicking the map picks a spot
   map.on('click', function (e) {
@@ -1033,6 +1201,23 @@
   document.addEventListener('click', function (e) { if (!menu.contains(e.target)) setMenu(false); });
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape') setMenu(false); });
   map.on('click movestart', function () { setMenu(false); });
+
+  var unitsBtn = qs('unitsBtn'), themeBtn = qs('themeBtn');
+  function syncPrefsUI() {
+    unitsBtn.textContent = 'Units: ' + (prefs.units === 'metric' ? 'Metric (cm, m, °C)' : 'Imperial (in, ft, °F)');
+    themeBtn.textContent = 'Theme: ' + { auto: 'Auto', light: 'Light', dark: 'Dark' }[prefs.theme];
+  }
+  unitsBtn.addEventListener('click', function () {
+    prefs.units = prefs.units === 'metric' ? 'imperial' : 'metric';
+    savePrefs(); syncPrefsUI();
+    if (lastCardState && !card.hidden) renderCard(lastCardState);
+    renderSaved();
+  });
+  themeBtn.addEventListener('click', function () {
+    prefs.theme = prefs.theme === 'auto' ? 'light' : prefs.theme === 'light' ? 'dark' : 'auto';
+    savePrefs(); applyTheme(); syncPrefsUI();
+  });
+  applyTheme(); syncPrefsUI();
 
   // ---- desktop: start centered on the visitor's approximate location (from their IP address) ----
   // No permission prompt. Skipped when the link already has a view, and if the visitor has moved the map first.
