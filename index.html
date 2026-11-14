@@ -124,6 +124,7 @@
   #card { position: fixed; z-index: 1060; left: 12px; bottom: calc(var(--footer-h) + 14px); width: min(340px, calc(100vw - 24px)); background: #fff; color: var(--navy); border-radius: 10px; box-shadow: 0 2px 14px rgba(0,0,0,.4); padding: 14px 16px; }
   #cardTitle { font: 700 14px/1.3 Arvo, Georgia, "Times New Roman", serif; padding-right: 36px; word-break: break-word; }
   #cardDepth { font: 700 30px/1.15 Arvo, Georgia, "Times New Roman", serif; margin: 6px 0 2px; }
+  .wx-icon { font-size: 20px; margin-right: 6px; vertical-align: -2px; }
   #cardTemp { font-weight: 600; color: var(--navy) !important; font-size: 15px !important; }
   #card .line { font-size: 14px; color: #2d4f66; margin: 2px 0; word-break: break-word; }
   #card .actions { display: flex; gap: 8px; margin-top: 12px; }
@@ -229,6 +230,8 @@
 
   var DEFAULT_VIEW = { lat: 37.6, lng: -119.4, z: 6 };
   var STORE_KEY = 'snowlookout.saved.v1';
+  // How the card shows temperatures. 'long':  \u26c5 52\u00b0F \u00b7 High 61\u00b0F \u00b7 Low 38\u00b0F    'short':  \u26c5 52\u00b0F  \u219161\u00b0 \u219338\u00b0
+  var TEMP_STYLE = 'long';
 
   // <pure>
   function num(v) { var n = parseFloat(v); return isFinite(n) ? n : null; }
@@ -322,23 +325,67 @@
     return null;
   }
 
-  // NWS forecast periods -> current temperature (this hour's forecast) plus the next daytime high and night low.
+  // Weather icon from NWS's short forecast text ("Mostly Sunny", "Chance Snow Showers", ...).
+  function weatherIcon(text, isDay) {
+    var t = String(text || '').toLowerCase();
+    if (!t) return '';
+    if (/thunder/.test(t)) return '\u26c8\ufe0f';
+    var snow = /snow|flurr|blizzard/.test(t), rain = /rain|drizzle/.test(t) || (/shower/.test(t) && !snow);
+    if (snow && rain) return '\ud83c\udf28\ufe0f';
+    if (snow) return '\u2744\ufe0f';
+    if (/sleet|freezing|wintry|ice/.test(t)) return '\ud83c\udf28\ufe0f';
+    if (rain) return '\ud83c\udf27\ufe0f';
+    if (/fog|haze|smoke|mist/.test(t)) return '\ud83c\udf2b\ufe0f';
+    if (/mostly cloudy/.test(t)) return isDay ? '\ud83c\udf25\ufe0f' : '\u2601\ufe0f';
+    if (/partly (cloudy|sunny)/.test(t)) return isDay ? '\u26c5' : '\u2601\ufe0f';
+    if (/mostly (sunny|clear)/.test(t)) return isDay ? '\ud83c\udf24\ufe0f' : '\ud83c\udf19';
+    if (/sunny|clear/.test(t)) return isDay ? '\u2600\ufe0f' : '\ud83c\udf19';
+    if (/cloud|overcast/.test(t)) return '\u2601\ufe0f';
+    if (/wind|breezy|blustery/.test(t)) return '\ud83d\udca8';
+    return '';
+  }
+
+  function shortDay(startTime) {
+    var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(startTime || ''));
+    return m ? new Date(Date.UTC(+m[1], +m[2] - 1, +m[3])).toLocaleDateString('en-US', { weekday: 'short', timeZone: 'UTC' }) : '';
+  }
+
+  // NWS forecast periods -> current conditions (this hour's forecast) plus the next daytime high and night low.
   function summarizeWeather(daily, hourly) {
-    var w = { now: null, high: null, highDay: null, low: null };
-    if (hourly && hourly[0] && isFinite(hourly[0].temperature)) w.now = Math.round(hourly[0].temperature);
+    var w = { now: null, icon: '', desc: '', high: null, highDay: null, highDayShort: null, low: null };
+    var h = hourly && hourly[0];
+    if (h && isFinite(h.temperature)) {
+      w.now = Math.round(h.temperature);
+      w.desc = h.shortForecast || '';
+      w.icon = weatherIcon(h.shortForecast, h.isDaytime !== false);
+    }
     (daily || []).slice(0, 4).forEach(function (p, i) {
       if (!isFinite(p.temperature)) return;
-      if (p.isDaytime && w.high === null) { w.high = Math.round(p.temperature); w.highDay = i === 0 ? null : p.name; }
+      if (p.isDaytime && w.high === null) {
+        w.high = Math.round(p.temperature);
+        w.highDay = i === 0 ? null : p.name;
+        w.highDayShort = i === 0 ? null : shortDay(p.startTime);
+      }
       if (!p.isDaytime && w.low === null) w.low = Math.round(p.temperature);
     });
     return w;
   }
-  function fmtTemp(w) {
+  // style 'long':  52°F · High 61°F · Low 38°F      style 'short':  52°F  ↑61° ↓38°
+  // With a weather icon in front, "Now" is dropped.
+  function fmtTemp(w, style) {
+    if (w.now === null && w.high === null && w.low === null) return 'Temperature: unavailable';
+    var now = w.now === null ? null : (w.icon ? '' : 'Now ') + w.now + '\u00b0F';
+    if (style === 'short') {
+      var hl = [];
+      if (w.high !== null) hl.push('\u2191' + w.high + '\u00b0' + (w.highDayShort ? ' ' + w.highDayShort : ''));
+      if (w.low !== null) hl.push('\u2193' + w.low + '\u00b0');
+      return [now, hl.join(' ')].filter(Boolean).join('  ');
+    }
     var parts = [];
-    if (w.now !== null) parts.push('Now ' + w.now + '°F');
-    if (w.high !== null) parts.push('High ' + w.high + '°F' + (w.highDay ? ' (' + w.highDay + ')' : ''));
-    if (w.low !== null) parts.push('Low ' + w.low + '°F');
-    return parts.length ? parts.join(' \u00b7 ') : 'Temperature: unavailable';
+    if (now) parts.push(now);
+    if (w.high !== null) parts.push('High ' + w.high + '\u00b0F' + (w.highDay ? ' (' + w.highDay + ')' : ''));
+    if (w.low !== null) parts.push('Low ' + w.low + '\u00b0F');
+    return parts.join(' \u00b7 ');
   }
 
   function sameSpot(a, b) { return Math.abs(a.lat - b.lat) < 0.0006 && Math.abs(a.lng - b.lng) < 0.0006; }
@@ -431,7 +478,7 @@
   function fetchWeather(ll, signal, done) {
     var key = ll.lat.toFixed(2) + ',' + ll.lng.toFixed(2);
     var hit = wxCache[key];
-    if (hit && Date.now() - hit.t < 15 * 60000) { done(hit.text); return; }
+    if (hit && Date.now() - hit.t < 15 * 60000) { done(hit.w); return; }
     function json(r) { if (!r.ok) { var e = new Error('http'); e.status = r.status; throw e; } return r.json(); }
     fetch('https://api.weather.gov/points/' + ll.lat.toFixed(4) + ',' + ll.lng.toFixed(4), { signal: signal })
       .then(json)
@@ -443,9 +490,9 @@
         ]);
       })
       .then(function (r) {
-        var text = fmtTemp(summarizeWeather(r[0].properties && r[0].properties.periods, r[1].properties && r[1].properties.periods));
-        wxCache[key] = { t: Date.now(), text: text };
-        if (!signal.aborted) done(text);
+        var w = summarizeWeather(r[0].properties && r[0].properties.periods, r[1].properties && r[1].properties.periods);
+        wxCache[key] = { t: Date.now(), w: w };
+        if (!signal.aborted) done(w);
       })
       .catch(function (e) {
         if (e.name === 'AbortError' || signal.aborted) return;
@@ -562,11 +609,25 @@
   var pin = null, selLL = null, selTitle = null, sCtrl = null, nameSeq = 0;
   var card = qs('card');
 
+  function renderTemp(w) {
+    var el = qs('cardTemp');
+    el.textContent = '';
+    if (w == null) { el.textContent = 'Temperature: reading…'; return; }
+    if (typeof w === 'string') { el.textContent = w; return; }
+    if (w.icon) {
+      var ic = document.createElement('span');
+      ic.className = 'wx-icon'; ic.textContent = w.icon; ic.title = w.desc || '';
+      ic.setAttribute('role', 'img'); ic.setAttribute('aria-label', w.desc || 'Current weather');
+      el.appendChild(ic);
+    }
+    el.appendChild(document.createTextNode(fmtTemp(w, TEMP_STYLE)));
+  }
+
   function renderCard(s) {
     qs('cardDepth').textContent = s.head || 'Reading snow depth…';
     var note = qs('cardNote');
     note.textContent = s.note; note.hidden = !s.note;
-    qs('cardTemp').textContent = s.temp == null ? 'Temperature: reading…' : s.temp;
+    renderTemp(s.temp);
     qs('cardElev').textContent = 'Elevation: ' + (s.elev || 'reading…');
     qs('cardCoords').textContent = s.coords;
   }
