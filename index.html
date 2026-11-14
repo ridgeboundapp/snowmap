@@ -36,7 +36,7 @@
   #tip { position: fixed; z-index: 1000; pointer-events: none; background: rgba(20,32,25,.94); color: #fff; padding: 8px 11px; border-radius: 5px; font-size: 14px; line-height: 1.3; box-shadow: 0 2px 8px rgba(0,0,0,.35); display: none; max-width: 340px; }
   #tip b { font-size: 18px; display: block; }
   #tip small { opacity: .8; display: block; word-break: break-word; }
-  #search { position: relative; margin-left: auto; flex: 0 1 300px; min-width: 0; font-size: 14px; }
+  #search { position: relative; flex: 0 1 300px; min-width: 0; font-size: 14px; }
   #search form { display: flex; background: #fff; border-radius: 4px; overflow: hidden; height: 34px; }
   #search input { flex: 1; min-width: 0; border: 0; padding: 0 10px; font: inherit; color: var(--ink); background: transparent; outline: none; }
   #search button { border: 0; background: transparent; width: 34px; cursor: pointer; font-size: 16px; color: var(--forest); }
@@ -46,6 +46,9 @@
   #results li:last-child { border-bottom: 0; }
   #results li:hover, #results li:focus-visible { background: var(--bg); outline: none; }
   #results li.note { cursor: default; color: #10466c; opacity: .75; }
+  .nav-link { margin-left: auto; margin-right: 8px; flex: none; color: #fff; font-family: Arvo, Georgia, "Times New Roman", serif; font-size: 14px; text-decoration: none; padding: 6px 4px; border-radius: 4px; }
+  .nav-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+  .nav-link:focus-visible { outline: 2px solid var(--frost); outline-offset: 2px; }
   @media (max-width: 480px) { header { gap: 8px; padding: 0 12px; } header .name { font-size: 17px; } header .tagline { font-size: 11px; } .brand { gap: 8px; } }
 </style>
 </head>
@@ -58,6 +61,7 @@
       <div class="tagline">Snow before you go!</div>
     </div>
   </a>
+<a class="nav-link" href="about.html">About</a>
 <div id="search">
   <form id="searchForm" role="search" autocomplete="off">
     <input id="q" type="search" placeholder="Search for a place" aria-label="Search for a place">

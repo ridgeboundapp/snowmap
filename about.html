@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="description" content="Snow Lookout shows current snow depth across the mountains on an interactive map, so you can check conditions before you head out.">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>About Snow Lookout</title>
+<link rel="icon" href="favicon.ico" sizes="48x48">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+<link rel="manifest" href="site.webmanifest">
+<meta name="theme-color" content="#10466c">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Arvo:wght@400;700&display=swap">
+<style>
+  :root { --bg:#eef2f0; --ink:#1c2a22; --header-h:56px; --navy:#10466c; --frost:#a9c8de; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body { font: 17px/1.65 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--ink); min-height: 100vh; }
+  header { height: var(--header-h); background: var(--navy); color: #fff; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 16px; }
+  .brand { flex: none; white-space: nowrap; display: flex; align-items: center; gap: 12px; color: inherit; text-decoration: none; border-radius: 6px; }
+  .brand:hover .name { text-decoration: underline; text-underline-offset: 3px; }
+  .brand:focus-visible, .nav-link:focus-visible { outline: 2px solid var(--frost); outline-offset: 4px; }
+  .brand svg { flex: none; display: block; }
+  header .name { font-family: Arvo, Georgia, "Times New Roman", serif; font-size: 20px; font-weight: 400; line-height: 1.1; }
+  header .tagline { font-family: Arvo, Georgia, "Times New Roman", serif; font-size: 12.5px; color: var(--frost); line-height: 1.2; margin-top: 3px; }
+  .nav-link { flex: none; color: #fff; font-family: Arvo, Georgia, "Times New Roman", serif; font-size: 14px; text-decoration: none; padding: 6px 4px; border-radius: 4px; }
+  .nav-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+  main { max-width: 680px; margin: 0 auto; padding: 44px 20px 72px; }
+  h1 { font: inherit; color: inherit; margin: 0 0 20px; }
+  p { margin: 0 0 20px; }
+  .back { display: inline-block; margin-top: 12px; background: var(--navy); color: #fff; text-decoration: none; font: inherit; padding: 10px 18px; border-radius: 6px; }
+  .back:hover { background: #0c3a59; }
+  .back:focus-visible { outline: 2px solid var(--navy); outline-offset: 3px; }
+  @media (max-width: 480px) { header { padding: 0 12px; } header .name { font-size: 17px; } header .tagline { font-size: 11px; } .brand { gap: 8px; } main { padding-top: 32px; } }
+</style>
+</head>
+<body>
+<header>
+  <a class="brand" href="https://snowlookout.com" aria-label="Snow Lookout home">
+    <svg aria-hidden="true" viewBox="20 10 120 148" width="34" height="42"><path d="M80 152 C80 152 26 104 26 70 A54 54 0 1 1 134 70 C134 104 80 152 80 152 Z" fill="#a9c8de"/><circle cx="80" cy="70" r="40" fill="#10466c"/><clipPath id="pinclip"><circle cx="80" cy="70" r="40"/></clipPath><g clip-path="url(#pinclip)"><polygon points="98,58 130,112 66,112" fill="#5f8fb0"/><polygon points="72,34 112,112 32,112" fill="#fff"/><polygon points="72,34 92,72 82,66 72,76 62,66 52,72" fill="#a9c8de"/><polygon points="72,34 80,50 76,47 72,53 68,47 64,50" fill="#fff"/></g><circle cx="106" cy="44" r="7" fill="#ff8a4c"/></svg>
+    <div>
+      <div class="name">Snow Lookout</div>
+      <div class="tagline">Snow before you go!</div>
+    </div>
+  </a>
+  <a class="nav-link" href="./">Map</a>
+</header>
+
+<main>
+  <h1>About Snow Lookout</h1>
+  <p>Snow Lookout shows current snow depth across the mountains on an interactive map, so you can check conditions before you head out. Move your cursor over any spot to see the snow depth in inches (or feet for deep snow) along with the elevation at that exact location. Search for a town, trail or peak to jump straight to it, and switch between topographic, street and satellite maps to see the terrain you're planning for.</p>
+  <p>Snow depth comes from NOAA's National Snow Analyses, a model updated daily with ground, airborne and satellite observations. Because it's modeled on a one square kilometer grid, treat it as a planning guide, not a measurement at a precise spot. Always check local conditions and avalanche forecasts before you go.</p>
+  <a class="back" href="./">Back to the map</a>
+</main>
+</body>
+</html>
