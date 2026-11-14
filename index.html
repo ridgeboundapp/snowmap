@@ -301,11 +301,13 @@
 
   var qs = function (id) { return document.getElementById(id); };
   var startHash = parseHash(location.hash);
+  var canHover = window.matchMedia('(hover: hover) and (pointer: fine)').matches;   // desktop-style mouse
+  var DESKTOP_ZOOM = 7;
 
   // ---- map and base layers --------------------------------------------------
   var map = L.map('map').setView(
     startHash.c || [DEFAULT_VIEW.lat, DEFAULT_VIEW.lng],
-    startHash.z || DEFAULT_VIEW.z
+    startHash.z || (canHover ? DESKTOP_ZOOM : DEFAULT_VIEW.z)
   );
 
   var baseDefs = [];
@@ -439,7 +441,6 @@
 
   // ---- hover tooltip (mouse only) -------------------------------------------
   var tip = qs('tip');
-  var canHover = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
   var spot = L.circleMarker([0, 0], { radius: 5, color: '#fff', weight: 2, fillColor: '#1c2a22', fillOpacity: 1, interactive: false });
   var hTimer = null, hCtrl = null, lastX = 0, lastY = 0;
 
@@ -873,6 +874,25 @@
   document.addEventListener('click', function (e) { if (!menu.contains(e.target)) setMenu(false); });
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape') setMenu(false); });
   map.on('click movestart', function () { setMenu(false); });
+
+  // ---- desktop: start centered on the visitor's approximate location (from their IP address) ----
+  // No permission prompt. Skipped when the link already has a view, and if the visitor has moved the map first.
+  if (canHover && !startHash.c) {
+    var userMoved = false;
+    map.on('dragstart', function () { userMoved = true; });
+    map.getContainer().addEventListener('wheel', function () { userMoved = true; }, { passive: true });
+    var lc = new AbortController(), lt = setTimeout(function () { lc.abort(); }, 5000);
+    fetch('https://get.geojs.io/v1/ip/geo.json', { signal: lc.signal })
+      .then(function (r) { if (!r.ok) throw new Error('geo'); return r.json(); })
+      .then(function (g) {
+        clearTimeout(lt);
+        var la = num(g.latitude), lo = num(g.longitude);
+        if (la === null || lo === null || Math.abs(la) > 90 || Math.abs(lo) > 180) return;
+        if (userMoved || selLL) return;
+        map.setView([la, lo], DESKTOP_ZOOM);
+      })
+      .catch(function () { clearTimeout(lt); });
+  }
 
   // ---- start up: open a shared spot if the link has one ---------------------
   if (startHash.p) select(L.latLng(startHash.p[0], startHash.p[1]), startHash.n || null);
