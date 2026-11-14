@@ -36,10 +36,10 @@
   #search button { border: 0; background: transparent; width: 34px; cursor: pointer; font-size: 16px; color: var(--forest); }
   #search button:hover, #search button:focus-visible { background: var(--bg); outline: none; }
   #results { position: absolute; top: 100%; right: 0; width: min(380px, calc(100vw - 32px)); z-index: 1200; list-style: none; margin: 6px 0 0; padding: 0; background: #fff; border-radius: 4px; box-shadow: 0 1px 5px rgba(0,0,0,.45); max-height: 260px; overflow-y: auto; display: none; }
-  #results li { padding: 8px 10px; cursor: pointer; border-bottom: 1px solid var(--line); line-height: 1.3; }
+  #results li { padding: 8px 10px; cursor: pointer; border-bottom: 1px solid var(--line); line-height: 1.3; color: #10466c; }
   #results li:last-child { border-bottom: 0; }
   #results li:hover, #results li:focus-visible { background: var(--bg); outline: none; }
-  #results li.note { cursor: default; color: #5d6b63; }
+  #results li.note { cursor: default; color: #10466c; opacity: .75; }
   @media (max-width: 480px) { header { gap: 8px; padding: 0 12px; } header .name { font-size: 17px; } header .tagline { font-size: 11px; } .brand { gap: 8px; } }
 </style>
 </head>
@@ -242,61 +242,110 @@
   });
 
 
-  // ---- place search (OpenStreetMap Nominatim) ----------------------------
+  // ---- place search: live results while typing (Photon, OpenStreetMap data) ----
   var searchBox = document.getElementById('search');
   L.DomEvent.disableClickPropagation(searchBox);
   L.DomEvent.disableScrollPropagation(searchBox);
-  searchBox.addEventListener('mouseenter', function () { tip.style.display = 'none'; map.removeLayer(spot); });
 
   var results = document.getElementById('results');
   var q = document.getElementById('q');
-  var pin = null;
+  var pin = null, sctrl = null, stimer = null, sseq = 0;
 
   function note(text) { results.innerHTML = '<li class="note"></li>'; results.firstChild.textContent = text; results.style.display = 'block'; }
+  function hideResults() { results.style.display = 'none'; }
+
+  // Photon: GeoJSON features. extent is [west, north, east, south].
+  function fromPhoton(d) {
+    return ((d && d.features) || []).map(function (f) {
+      var p = f.properties || {}, c = f.geometry.coordinates;
+      var parts = [p.name, p.street, p.city || p.county, p.state, p.country].filter(Boolean);
+      parts = parts.filter(function (x, i) { return parts.indexOf(x) === i; });
+      var ex = p.extent;
+      return { label: parts.join(', '), lat: c[1], lon: c[0], bbox: ex ? [ex[3], ex[1], ex[0], ex[2]] : null };
+    }).filter(function (r) { return r.label; });
+  }
+  // Nominatim fallback: boundingbox is [south, north, west, east] as strings.
+  function fromNominatim(list) {
+    return (list || []).map(function (r) {
+      return { label: r.display_name, lat: parseFloat(r.lat), lon: parseFloat(r.lon), bbox: r.boundingbox ? r.boundingbox.map(parseFloat) : null };
+    });
+  }
+
+  function searchPlaces(text, signal) {
+    var c = map.getCenter();
+    var photon = 'https://photon.komoot.io/api/?limit=6&lang=en&lat=' + c.lat.toFixed(3) + '&lon=' + c.lng.toFixed(3) + '&q=' + encodeURIComponent(text);
+    return fetch(photon, { signal: signal })
+      .then(function (r) { if (!r.ok) throw new Error('photon'); return r.json(); })
+      .then(fromPhoton)
+      .catch(function (e) {
+        if (e.name === 'AbortError') throw e;
+        return fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&limit=6&q=' + encodeURIComponent(text), { signal: signal })
+          .then(function (r) { if (!r.ok) throw new Error('nominatim'); return r.json(); })
+          .then(fromNominatim);
+      });
+  }
 
   function goTo(r) {
-    var ll = L.latLng(parseFloat(r.lat), parseFloat(r.lon));
+    var ll = L.latLng(r.lat, r.lon);
     if (pin) map.removeLayer(pin);
     pin = L.marker(ll, { bubblingMouseEvents: true }).addTo(map);
     var el = document.createElement('div');
     el.style.maxWidth = '220px';
-    el.textContent = r.display_name;
+    el.textContent = r.label;
     pin.bindPopup(el);
-    if (r.boundingbox) {
-      var bb = r.boundingbox.map(parseFloat);   // south, north, west, east
-      map.fitBounds([[bb[0], bb[2]], [bb[1], bb[3]]], { maxZoom: 13 });
+    if (r.bbox && r.bbox.every(function (n) { return isFinite(n); }) && r.bbox[0] !== r.bbox[1]) {
+      map.fitBounds([[r.bbox[0], r.bbox[2]], [r.bbox[1], r.bbox[3]]], { maxZoom: 13 });
     } else {
       map.setView(ll, 11);
     }
     pin.openPopup();
-    results.style.display = 'none';
-    q.value = r.display_name.split(',').slice(0, 2).join(',');
+    hideResults();
+    q.value = r.label.split(',').slice(0, 2).join(',');
   }
+
+  function render(list, jumpIfOne) {
+    if (!list.length) { note('No places found.'); return; }
+    results.innerHTML = '';
+    list.forEach(function (r) {
+      var li = document.createElement('li');
+      li.tabIndex = 0;
+      li.textContent = r.label;
+      li.addEventListener('click', function () { goTo(r); });
+      li.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') goTo(r); });
+      results.appendChild(li);
+    });
+    results.style.display = 'block';
+    if (jumpIfOne && list.length === 1) goTo(list[0]);
+  }
+
+  function run(text, jumpIfOne) {
+    if (sctrl) sctrl.abort();
+    sctrl = new AbortController();
+    var my = ++sseq;
+    note('Searching…');
+    searchPlaces(text, sctrl.signal)
+      .then(function (list) { if (my === sseq) render(list, jumpIfOne); })
+      .catch(function (e) { if (e.name !== 'AbortError' && my === sseq) note('Search is unavailable right now.'); });
+  }
+
+  // Search as you type: wait for a short pause, then look up what has been typed so far.
+  q.addEventListener('input', function () {
+    clearTimeout(stimer);
+    var text = q.value.trim();
+    if (text.length < 2) { if (sctrl) sctrl.abort(); sseq++; hideResults(); return; }
+    stimer = setTimeout(function () { run(text, false); }, 250);
+  });
 
   document.getElementById('searchForm').addEventListener('submit', function (e) {
     e.preventDefault();
+    clearTimeout(stimer);
     var text = q.value.trim();
-    if (!text) { results.style.display = 'none'; if (pin) { map.removeLayer(pin); pin = null; } return; }
-    note('Searching…');
-    fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&limit=6&q=' + encodeURIComponent(text))
-      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-      .then(function (list) {
-        if (!list.length) { note('No places found.'); return; }
-        results.innerHTML = '';
-        list.forEach(function (r) {
-          var li = document.createElement('li');
-          li.tabIndex = 0;
-          li.textContent = r.display_name;
-          li.addEventListener('click', function () { goTo(r); });
-          li.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') goTo(r); });
-          results.appendChild(li);
-        });
-        results.style.display = 'block';
-        if (list.length === 1) goTo(list[0]);
-      })
-      .catch(function () { note('Search is unavailable right now.'); });
+    if (!text) { if (sctrl) sctrl.abort(); sseq++; hideResults(); if (pin) { map.removeLayer(pin); pin = null; } return; }
+    run(text, true);
   });
-  document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape') results.style.display = 'none'; });
+
+  document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape') hideResults(); });
+  document.addEventListener('click', function (ev) { if (!searchBox.contains(ev.target)) hideResults(); });
 
 })();
 </script>
