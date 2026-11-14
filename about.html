@@ -37,13 +37,11 @@
   header { position: relative; z-index: 10; height: var(--header-h); background: var(--navy); color: #fff; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 16px; }
   .brand { flex: none; white-space: nowrap; display: flex; align-items: center; gap: 12px; color: inherit; text-decoration: none; border-radius: 6px; }
   .brand:hover .name { text-decoration: underline; text-underline-offset: 3px; }
-  .brand:focus-visible, .nav-link:focus-visible { outline: 2px solid var(--frost); outline-offset: 4px; }
+  .brand:focus-visible { outline: 2px solid var(--frost); outline-offset: 4px; }
   .brand svg { flex: none; display: block; }
   header .name { font-family: Arvo, Georgia, "Times New Roman", serif; font-size: 20px; font-weight: 400; line-height: 1.1; }
   header .tagline { font-family: Arvo, Georgia, "Times New Roman", serif; font-size: 12.5px; color: var(--frost); line-height: 1.2; margin-top: 3px; }
-  .nav-link { flex: none; color: #fff; font-family: Arvo, Georgia, "Times New Roman", serif; font-size: 14px; text-decoration: none; padding: 6px 4px; border-radius: 4px; }
-  .nav-link:hover { text-decoration: underline; text-underline-offset: 3px; }
-  .menu-btn { display: none; flex: none; width: 40px; height: 40px; margin-left: -8px; align-items: center; justify-content: center; background: none; border: 0; border-radius: 6px; color: #fff; cursor: pointer; }
+  .menu-btn { display: flex; flex: none; width: 40px; height: 40px; margin-left: -8px; align-items: center; justify-content: center; background: none; border: 0; border-radius: 6px; color: #fff; cursor: pointer; }
   .menu-btn:hover { background: rgba(255,255,255,.12); }
   .menu-btn:focus-visible { outline: 2px solid var(--frost); outline-offset: 1px; }
   .menu-btn svg { width: 24px; height: 24px; stroke: currentColor; stroke-width: 2; stroke-linecap: round; fill: none; }
@@ -52,7 +50,8 @@
   #menu a { display: block; padding: 14px 20px; color: var(--navy); font-family: Arvo, Georgia, "Times New Roman", serif; font-size: 16px; text-decoration: none; }
   #menu a:hover, #menu a:focus-visible { background: var(--bg); outline: none; }
   #menu a[aria-current="page"] { font-weight: 700; }
-  @media (max-width: 700px) { .menu-btn { display: flex; } .nav-link { display: none; } header { justify-content: flex-start; } }
+  header { justify-content: flex-start; }
+  @media (max-height: 500px) { :root { --header-h: 48px; } header .tagline { display: none; } main { padding-top: 24px; } }
   main { max-width: 680px; margin: 0 auto; padding: 44px 20px 72px; }
   h1 { font: inherit; color: inherit; margin: 0 0 20px; }
   p { margin: 0 0 20px; }
@@ -73,7 +72,6 @@
       <div class="tagline">Snow before you go!</div>
     </div>
   </a>
-  <a class="nav-link" href="./">Map</a>
 </header>
 
 <main>
