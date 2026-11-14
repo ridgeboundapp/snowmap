@@ -5,6 +5,19 @@
 <meta name="description" content="Snow Lookout shows current snow depth across the mountains on an interactive map, so you can check conditions before you head out.">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>About Snow Lookout</title>
+<link rel="canonical" href="https://snowlookout.com/about.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Snow Lookout">
+<meta property="og:title" content="About Snow Lookout">
+<meta property="og:description" content="Snow Lookout shows current snow depth across the mountains on an interactive map, so you can check conditions before you head out.">
+<meta property="og:url" content="https://snowlookout.com/about.html">
+<meta property="og:image" content="https://snowlookout.com/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="About Snow Lookout">
+<meta name="twitter:description" content="Snow Lookout shows current snow depth across the mountains on an interactive map, so you can check conditions before you head out.">
+<meta name="twitter:image" content="https://snowlookout.com/og-image.png">
 <link rel="icon" href="favicon.ico" sizes="48x48">
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png">
@@ -21,7 +34,7 @@
   * { box-sizing: border-box; }
   html, body { margin: 0; }
   body { font: 17px/1.65 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--ink); min-height: 100vh; }
-  header { height: var(--header-h); background: var(--navy); color: #fff; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 16px; }
+  header { position: relative; z-index: 10; height: var(--header-h); background: var(--navy); color: #fff; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 16px; }
   .brand { flex: none; white-space: nowrap; display: flex; align-items: center; gap: 12px; color: inherit; text-decoration: none; border-radius: 6px; }
   .brand:hover .name { text-decoration: underline; text-underline-offset: 3px; }
   .brand:focus-visible, .nav-link:focus-visible { outline: 2px solid var(--frost); outline-offset: 4px; }
@@ -30,6 +43,16 @@
   header .tagline { font-family: Arvo, Georgia, "Times New Roman", serif; font-size: 12.5px; color: var(--frost); line-height: 1.2; margin-top: 3px; }
   .nav-link { flex: none; color: #fff; font-family: Arvo, Georgia, "Times New Roman", serif; font-size: 14px; text-decoration: none; padding: 6px 4px; border-radius: 4px; }
   .nav-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+  .menu-btn { display: none; flex: none; width: 40px; height: 40px; margin-left: -8px; align-items: center; justify-content: center; background: none; border: 0; border-radius: 6px; color: #fff; cursor: pointer; }
+  .menu-btn:hover { background: rgba(255,255,255,.12); }
+  .menu-btn:focus-visible { outline: 2px solid var(--frost); outline-offset: 1px; }
+  .menu-btn svg { width: 24px; height: 24px; stroke: currentColor; stroke-width: 2; stroke-linecap: round; fill: none; }
+  #menu { position: absolute; top: 100%; left: 0; min-width: 210px; background: #fff; border-radius: 0 0 8px 0; box-shadow: 0 4px 14px rgba(0,0,0,.35); padding: 6px 0; }
+  #menu[hidden] { display: none; }
+  #menu a { display: block; padding: 14px 20px; color: var(--navy); font-family: Arvo, Georgia, "Times New Roman", serif; font-size: 16px; text-decoration: none; }
+  #menu a:hover, #menu a:focus-visible { background: var(--bg); outline: none; }
+  #menu a[aria-current="page"] { font-weight: 700; }
+  @media (max-width: 700px) { .menu-btn { display: flex; } .nav-link { display: none; } header { justify-content: flex-start; } }
   main { max-width: 680px; margin: 0 auto; padding: 44px 20px 72px; }
   h1 { font: inherit; color: inherit; margin: 0 0 20px; }
   p { margin: 0 0 20px; }
@@ -41,6 +64,8 @@
 </head>
 <body>
 <header>
+  <button class="menu-btn" id="menuBtn" type="button" aria-label="Menu" aria-expanded="false" aria-controls="menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+  <nav id="menu" aria-label="Pages" hidden><a href="./">Map</a><a href="about.html" aria-current="page">About</a></nav>
   <a class="brand" href="https://snowlookout.com" aria-label="Snow Lookout home">
     <svg aria-hidden="true" viewBox="20 10 120 148" width="34" height="42"><path d="M80 152 C80 152 26 104 26 70 A54 54 0 1 1 134 70 C134 104 80 152 80 152 Z" fill="#a9c8de"/><circle cx="80" cy="70" r="40" fill="#10466c"/><clipPath id="pinclip"><circle cx="80" cy="70" r="40"/></clipPath><g clip-path="url(#pinclip)"><polygon points="98,58 130,112 66,112" fill="#5f8fb0"/><polygon points="72,34 112,112 32,112" fill="#fff"/><polygon points="72,34 92,72 82,66 72,76 62,66 52,72" fill="#a9c8de"/><polygon points="72,34 80,50 76,47 72,53 68,47 64,50" fill="#fff"/></g><circle cx="106" cy="44" r="7" fill="#ff8a4c"/></svg>
     <div>
@@ -57,5 +82,14 @@
   <p>Snow depth comes from NOAA's National Snow Analyses, a model updated daily with ground, airborne and satellite observations. Because it's modeled on a one square kilometer grid, treat it as a planning guide, not a measurement at a precise spot. Always check local conditions and avalanche forecasts before you go.</p>
   <a class="back" href="./">Back to the map</a>
 </main>
+<script>
+(function () {
+  var btn = document.getElementById('menuBtn'), menu = document.getElementById('menu');
+  function set(o) { menu.hidden = !o; btn.setAttribute('aria-expanded', o ? 'true' : 'false'); }
+  btn.addEventListener('click', function (e) { e.stopPropagation(); set(menu.hidden); });
+  document.addEventListener('click', function (e) { if (!menu.contains(e.target)) set(false); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') set(false); });
+})();
+</script>
 </body>
 </html>
