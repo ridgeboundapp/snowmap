@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Snow Lookout</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%228%206%20144%20154%22%3E%3Cpath%20d=%22M80%20152%20C80%20152%2026%20104%2026%2070%20A54%2054%200%201%201%20134%2070%20C134%20104%2080%20152%2080%20152%20Z%22%20fill=%22%23a9c8de%22/%3E%3Ccircle%20cx=%2280%22%20cy=%2270%22%20r=%2240%22%20fill=%22%2317324a%22/%3E%3CclipPath%20id=%22pinclip%22%3E%3Ccircle%20cx=%2280%22%20cy=%2270%22%20r=%2240%22/%3E%3C/clipPath%3E%3Cg%20clip-path=%22url(%23pinclip)%22%3E%3Cpolygon%20points=%2298,58%20130,112%2066,112%22%20fill=%22%235f8fb0%22/%3E%3Cpolygon%20points=%2272,34%20112,112%2032,112%22%20fill=%22%23fff%22/%3E%3Cpolygon%20points=%2272,34%2092,72%2082,66%2072,76%2062,66%2052,72%22%20fill=%22%23a9c8de%22/%3E%3Cpolygon%20points=%2272,34%2080,50%2076,47%2072,53%2068,47%2064,50%22%20fill=%22%23fff%22/%3E%3C/g%3E%3Ccircle%20cx=%22106%22%20cy=%2244%22%20r=%227%22%20fill=%22%23ff8a4c%22/%3E%3C/svg%3E">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png">
+<meta name="theme-color" content="#17324a">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+  :root { --bg:#eef2f0; --panel:#fff; --ink:#1c2a22; --line:#d5ddd7; --forest:#2f5d3a; --header-h:56px; --navy:#17324a; --frost:#a9c8de; }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body { font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: var(--bg); color: var(--ink); }
+  header { position: relative; z-index: 1100; height: var(--header-h); background: var(--navy); color: #fff; display: flex; align-items: center; gap: 12px; padding: 0 16px; }
+  .brand { display: flex; align-items: center; gap: 12px; color: inherit; text-decoration: none; border-radius: 6px; }
+  .brand:hover .name { text-decoration: underline; text-underline-offset: 3px; }
+  .brand:focus-visible { outline: 2px solid var(--frost); outline-offset: 4px; }
+  .brand svg { flex: none; display: block; }
+  header .name { font-size: 20px; font-weight: 700; letter-spacing: .01em; line-height: 1.1; }
+  header .tagline { font-size: 12.5px; color: var(--frost); line-height: 1.2; margin-top: 2px; }
+  #map { position: absolute; inset: var(--header-h) 0 0 0; }
+  .leaflet-container { font: inherit; cursor: crosshair; }
+  #tip { position: fixed; z-index: 1000; pointer-events: none; background: rgba(20,32,25,.94); color: #fff; padding: 8px 11px; border-radius: 5px; font-size: 14px; line-height: 1.3; box-shadow: 0 2px 8px rgba(0,0,0,.35); display: none; max-width: 340px; }
+  #tip b { font-size: 18px; display: block; }
+  #tip small { opacity: .8; display: block; word-break: break-word; }
+  #search { position: absolute; z-index: 1000; top: calc(var(--header-h) + 10px); right: 180px; width: min(300px, max(150px, calc(100vw - 200px))); font-size: 14px; }
+  #search form { display: flex; background: #fff; border-radius: 4px; box-shadow: 0 1px 5px rgba(0,0,0,.45); overflow: hidden; height: 34px; }
+  #search input { flex: 1; min-width: 0; border: 0; padding: 0 10px; font: inherit; color: var(--ink); background: transparent; outline: none; }
+  #search button { border: 0; background: transparent; width: 34px; cursor: pointer; font-size: 16px; color: var(--forest); }
+  #search button:hover, #search button:focus-visible { background: var(--bg); outline: none; }
+  #results { list-style: none; margin: 4px 0 0; padding: 0; background: #fff; border-radius: 4px; box-shadow: 0 1px 5px rgba(0,0,0,.45); max-height: 260px; overflow-y: auto; display: none; }
+  #results li { padding: 8px 10px; cursor: pointer; border-bottom: 1px solid var(--line); line-height: 1.3; }
+  #results li:last-child { border-bottom: 0; }
+  #results li:hover, #results li:focus-visible { background: var(--bg); outline: none; }
+  #results li.note { cursor: default; color: #5d6b63; }
+</style>
+</head>
+<body>
+<header>
+  <a class="brand" href="https://snowlookout.com" aria-label="Snow Lookout home">
+    <svg aria-hidden="true" viewBox="20 10 120 148" width="34" height="42"><path d="M80 152 C80 152 26 104 26 70 A54 54 0 1 1 134 70 C134 104 80 152 80 152 Z" fill="#a9c8de"/><circle cx="80" cy="70" r="40" fill="#17324a"/><clipPath id="pinclip"><circle cx="80" cy="70" r="40"/></clipPath><g clip-path="url(#pinclip)"><polygon points="98,58 130,112 66,112" fill="#5f8fb0"/><polygon points="72,34 112,112 32,112" fill="#fff"/><polygon points="72,34 92,72 82,66 72,76 62,66 52,72" fill="#a9c8de"/><polygon points="72,34 80,50 76,47 72,53 68,47 64,50" fill="#fff"/></g><circle cx="106" cy="44" r="7" fill="#ff8a4c"/></svg>
+    <div>
+      <div class="name">Snow Lookout</div>
+      <div class="tagline">Snow before you go</div>
+    </div>
+  </a>
+</header>
+<div id="map"></div>
+<div id="tip"></div>
+<div id="search">
+  <form id="searchForm" role="search" autocomplete="off">
+    <input id="q" type="search" placeholder="Search for a place" aria-label="Search for a place">
+    <button type="submit" aria-label="Search">&#128269;</button>
+  </form>
+  <ul id="results"></ul>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function () {
+  var BASE = 'https://mapservices.weather.noaa.gov/raster';
+  var WMS = BASE + '/services/snow/NOHRSC_Snow_Analysis/MapServer/WMSServer';
+  var REST = BASE + '/rest/services/snow/NOHRSC_Snow_Analysis/MapServer/identify';
+
+  // Raw pixel unit from NOAA: 'm' (confirmed by the user), 'mm' or 'in'.
+  // The tooltip also shows the raw value.
+  var SOURCE_UNIT = 'm';
+  // Layer settings tried in order until one returns a number.
+  var LAYER_OPTIONS = ['all:3', 'all:0', 'visible:3', 'top:3'];
+  var working = null;
+
+  var map = L.map('map').setView([37.6, -119.4], 6);
+  var bases = {
+    'OpenStreetMap': L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19, zIndex: 1, attribution: '&copy; OpenStreetMap contributors' }),
+    'USGS Topo': L.tileLayer('https://basemap.nationalmap.gov/arcgis/rest/services/USGSTopo/MapServer/tile/{z}/{y}/{x}', {
+      maxZoom: 15, zIndex: 1, attribution: 'USGS The National Map' }),
+    'Satellite': L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+      maxZoom: 18, zIndex: 1, attribution: 'Esri, Maxar, Earthstar Geographics' })
+  };
+  // Tracestrack Topo (OpenStreetMap data). Tracestrack needs a free account key:
+  // sign up at https://www.tracestrack.com, create a key, and paste it here.
+  var TRACESTRACK_KEY = 'e7e57e9640fe8062c4fceb819609c32b';
+  var defaultBase = bases['USGS Topo'];   // used until a Tracestrack key is set
+  if (TRACESTRACK_KEY) {
+    var tt = L.tileLayer('https://tile.tracestrack.com/topo__/{z}/{x}/{y}.png?key=' + encodeURIComponent(TRACESTRACK_KEY), {
+      maxZoom: 19, zIndex: 1, attribution: 'Tiles &copy; Tracestrack, Map data &copy; OpenStreetMap contributors' });
+    var withTrace = { 'Tracestrack Topo': tt };
+    Object.keys(bases).forEach(function (k) { withTrace[k] = bases[k]; });
+    bases = withTrace;
+    defaultBase = tt;
+  }
+  defaultBase.addTo(map);
+
+  var snow = L.tileLayer.wms(WMS, {
+    layers: '5', format: 'image/png', transparent: true, version: '1.1.1', opacity: 0.8, zIndex: 10,
+    attribution: 'Snow depth: NOAA / NWS / NOHRSC'
+  }).addTo(map);
+
+  L.control.layers(bases, { 'Snow depth': snow }, { position: 'topright', collapsed: true }).addTo(map);
+
+  var spot = L.circleMarker([0, 0], { radius: 5, color: '#fff', weight: 2, fillColor: '#1c2a22', fillOpacity: 1, interactive: false });
+  var tip = document.getElementById('tip');
+  var timer = null, ctrl = null, seq = 0;
+  var cur = null, elev = null, lastX = 0, lastY = 0;
+
+  function draw() {
+    if (!cur) return;
+    place(lastX, lastY, '<b>' + cur.head + '</b>' + (cur.sub ? '<small>' + cur.sub + '</small>' : '') +
+      '<small>Elevation: ' + (elev || 'reading…') + '</small><small>' + cur.coords + '</small>');
+  }
+
+  // Elevation: ask USGS and Open-Meteo at the same time and use whichever answers first.
+  var elevCache = {};
+  function fetchElevation(ll, my, signal) {
+    var key = ll.lat.toFixed(3) + ',' + ll.lng.toFixed(3);
+    function show(ft) {
+      if (my !== seq) return;
+      elev = Math.round(ft).toLocaleString() + ' ft (' + Math.round(ft * 0.3048).toLocaleString() + ' m)';
+      draw();
+    }
+    if (elevCache[key] != null) { show(elevCache[key]); return; }
+    var usgs = fetch('https://epqs.nationalmap.gov/v1/json?x=' + ll.lng.toFixed(5) + '&y=' + ll.lat.toFixed(5) +
+        '&wkid=4326&units=Feet&includeDate=false', { signal: signal })
+      .then(function (r) { if (!r.ok) throw new Error('usgs'); return r.json(); })
+      .then(function (d) { var v = parseFloat(d.value); if (isNaN(v) || v < -1000) throw new Error('usgs'); return v; });
+    var meteo = fetch('https://api.open-meteo.com/v1/elevation?latitude=' + ll.lat.toFixed(5) + '&longitude=' + ll.lng.toFixed(5), { signal: signal })
+      .then(function (r) { if (!r.ok) throw new Error('meteo'); return r.json(); })
+      .then(function (d) { return d.elevation[0] * 3.28084; });
+    Promise.any([usgs, meteo]).then(function (ft) {
+      elevCache[key] = ft;
+      show(ft);
+    }).catch(function () {
+      if (signal.aborted || my !== seq) return;
+      elev = 'unavailable'; draw();
+    });
+  }
+
+  function place(x, y, html) {
+    tip.innerHTML = html;
+    tip.style.display = 'block';
+    var w = tip.offsetWidth, h = tip.offsetHeight;
+    var left = x + 16, top = y + 16;
+    if (left + w > innerWidth - 8) left = x - w - 16;
+    if (top + h > innerHeight - 8) top = y - h - 16;
+    tip.style.left = left + 'px';
+    tip.style.top = top + 'px';
+  }
+
+  // Find a numeric pixel value anywhere in an identify response.
+  function pickValue(d) {
+    var list = (d && d.results) || [];
+    for (var i = 0; i < list.length; i++) {
+      var a = list[i].attributes || {};
+      var keys = Object.keys(a);
+      var pref = keys.filter(function (k) { return /pixel|value|depth|stretch/i.test(k); });
+      var order = pref.concat(keys.filter(function (k) { return pref.indexOf(k) < 0; }));
+      for (var j = 0; j < order.length; j++) {
+        var s = String(a[order[j]]).trim();
+        if (/^nodata$/i.test(s)) continue;
+        var n = parseFloat(s);
+        if (!isNaN(n) && /^-?[\d.]+(e[+-]?\d+)?$/i.test(s)) return { raw: n, key: order[j] };
+      }
+    }
+    return null;
+  }
+
+  function ask(layers, ll, signal) {
+    var b = map.getBounds(), s = map.getSize();
+    var p = new URLSearchParams({
+      f: 'json', geometry: ll.lng + ',' + ll.lat, geometryType: 'esriGeometryPoint',
+      sr: '4326', layers: layers, tolerance: '3', returnGeometry: 'false', returnFieldName: 'false',
+      mapExtent: [b.getWest(), b.getSouth(), b.getEast(), b.getNorth()].join(','),
+      imageDisplay: s.x + ',' + s.y + ',96'
+    });
+    return fetch(REST + '?' + p, { signal: signal }).then(function (r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    });
+  }
+
+  function query(ll, x, y) {
+    if (ctrl) ctrl.abort();
+    ctrl = new AbortController();
+    var my = ++seq, sig = ctrl.signal;
+    cur = null; elev = null; lastX = x; lastY = y;
+    fetchElevation(ll, my, sig);
+    var tries = working ? [working] : LAYER_OPTIONS;
+    var last = null;
+
+    (function next(i) {
+      if (i >= tries.length) {
+        if (my !== seq) return;
+        var hint = last && last.error ? (last.error.message || 'service error')
+          : 'results: ' + ((last && last.results && last.results.length) || 0);
+        place(x, y, '<b>No reading</b><small>NOAA returned no depth here (' + hint + ').</small>');
+        console.log('Identify response', last);
+        return;
+      }
+      ask(tries[i], ll, sig).then(function (d) {
+        if (my !== seq) return;
+        last = d;
+        var hit = pickValue(d);
+        if (!hit) return next(i + 1);
+        working = tries[i];
+        var inches = SOURCE_UNIT === 'm' ? hit.raw * 39.3701 : SOURCE_UNIT === 'mm' ? hit.raw / 25.4 : hit.raw;
+        var head = inches < 0.05 ? 'No snow'
+          : inches > 24 ? (inches / 12).toFixed(1) + ' ft'
+          : (inches < 10 ? inches.toFixed(1) : Math.round(inches)) + ' in';
+        var sub = '';
+        cur = { head: head, sub: sub, coords: ll.lat.toFixed(3) + ', ' + ll.lng.toFixed(3) };
+        draw();
+      }).catch(function (e) {
+        if (e.name === 'AbortError') return;
+        if (my !== seq) return;
+        place(x, y, '<b>Unavailable</b><small>' + e.message + '. Could not reach NOAA.</small>');
+      });
+    })(0);
+  }
+
+  function over(e) {
+    var x = e.originalEvent.clientX, y = e.originalEvent.clientY;
+    lastX = x; lastY = y;
+    spot.setLatLng(e.latlng).addTo(map);
+    if (tip.style.display === 'block') { tip.style.left = (x + 16) + 'px'; tip.style.top = (y + 16) + 'px'; }
+    else place(x, y, '<small>Reading snow depth…</small>');
+    clearTimeout(timer);
+    timer = setTimeout(function () { query(e.latlng, x, y); }, 80);
+  }
+  map.on('mousemove', over);
+  map.on('click', over);
+  map.on('mouseout movestart', function () {
+    clearTimeout(timer); if (ctrl) ctrl.abort(); seq++;
+    tip.style.display = 'none'; map.removeLayer(spot);
+  });
+
+
+  // ---- place search (OpenStreetMap Nominatim) ----------------------------
+  var searchBox = document.getElementById('search');
+  L.DomEvent.disableClickPropagation(searchBox);
+  L.DomEvent.disableScrollPropagation(searchBox);
+  searchBox.addEventListener('mouseenter', function () { tip.style.display = 'none'; map.removeLayer(spot); });
+
+  var results = document.getElementById('results');
+  var q = document.getElementById('q');
+  var pin = null;
+
+  function note(text) { results.innerHTML = '<li class="note"></li>'; results.firstChild.textContent = text; results.style.display = 'block'; }
+
+  function goTo(r) {
+    var ll = L.latLng(parseFloat(r.lat), parseFloat(r.lon));
+    if (pin) map.removeLayer(pin);
+    pin = L.marker(ll, { bubblingMouseEvents: true }).addTo(map);
+    var el = document.createElement('div');
+    el.style.maxWidth = '220px';
+    el.textContent = r.display_name;
+    pin.bindPopup(el);
+    if (r.boundingbox) {
+      var bb = r.boundingbox.map(parseFloat);   // south, north, west, east
+      map.fitBounds([[bb[0], bb[2]], [bb[1], bb[3]]], { maxZoom: 13 });
+    } else {
+      map.setView(ll, 11);
+    }
+    pin.openPopup();
+    results.style.display = 'none';
+    q.value = r.display_name.split(',').slice(0, 2).join(',');
+  }
+
+  document.getElementById('searchForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var text = q.value.trim();
+    if (!text) { results.style.display = 'none'; if (pin) { map.removeLayer(pin); pin = null; } return; }
+    note('Searching…');
+    fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&limit=6&q=' + encodeURIComponent(text))
+      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(function (list) {
+        if (!list.length) { note('No places found.'); return; }
+        results.innerHTML = '';
+        list.forEach(function (r) {
+          var li = document.createElement('li');
+          li.tabIndex = 0;
+          li.textContent = r.display_name;
+          li.addEventListener('click', function () { goTo(r); });
+          li.addEventListener('keydown', function (ev) { if (ev.key === 'Enter') goTo(r); });
+          results.appendChild(li);
+        });
+        results.style.display = 'block';
+        if (list.length === 1) goTo(list[0]);
+      })
+      .catch(function () { note('Search is unavailable right now.'); });
+  });
+  document.addEventListener('keydown', function (ev) { if (ev.key === 'Escape') results.style.display = 'none'; });
+
+})();
+</script>
+</body>
+</html>
