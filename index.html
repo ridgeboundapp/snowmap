@@ -553,7 +553,22 @@
     } catch (e) { return []; }
   })();
   var warnedStorage = false;
+  // Ask the browser not to evict our saved places when it runs low on space. Done right after the
+  // visitor saves something (some browsers show a prompt, so it should follow their action), once per visit.
+  var askedPersist = false;
+  function keepStorage() {
+    if (askedPersist || !saved.length) return;
+    askedPersist = true;
+    try {
+      if (navigator.storage && navigator.storage.persist) {
+        navigator.storage.persisted().then(function (already) {
+          if (!already) return navigator.storage.persist();
+        }).catch(function () {});
+      }
+    } catch (e) {}
+  }
   function persist() {
+    keepStorage();
     try { localStorage.setItem(STORE_KEY, JSON.stringify(saved)); }
     catch (e) { if (!warnedStorage) { warnedStorage = true; toast('Saved for this visit only. Your browser is blocking storage.'); } }
   }
