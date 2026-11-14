@@ -124,6 +124,7 @@
   #card { position: fixed; z-index: 1060; left: 12px; bottom: calc(var(--footer-h) + 14px); width: min(340px, calc(100vw - 24px)); background: #fff; color: var(--navy); border-radius: 10px; box-shadow: 0 2px 14px rgba(0,0,0,.4); padding: 14px 16px; }
   #cardTitle { font: 700 14px/1.3 Arvo, Georgia, "Times New Roman", serif; padding-right: 36px; word-break: break-word; }
   #cardDepth { font: 700 30px/1.15 Arvo, Georgia, "Times New Roman", serif; margin: 6px 0 2px; }
+  #cardTemp { font-weight: 600; color: var(--navy) !important; font-size: 15px !important; }
   #card .line { font-size: 14px; color: #2d4f66; margin: 2px 0; word-break: break-word; }
   #card .actions { display: flex; gap: 8px; margin-top: 12px; }
   #card .actions button { flex: 1; min-height: 44px; border-radius: 8px; border: 1px solid var(--navy); background: #fff; color: var(--navy); font: inherit; font-size: 15px; cursor: pointer; }
@@ -184,6 +185,7 @@
   <button id="cardClose" type="button" aria-label="Close">&times;</button>
   <div id="cardTitle"></div>
   <div id="cardDepth" aria-live="polite"></div>
+  <div class="line" id="cardTemp"></div>
   <div class="line" id="cardNote" hidden></div>
   <div class="line" id="cardElev"></div>
   <div class="line" id="cardCoords"></div>
@@ -294,6 +296,51 @@
     }
   }
 
+  // Latitude/longitude typed into the search box: "37.77, -122.42", "37.77 -122.42",
+  // "37.77N 122.42W", "N37.77 W122.42" or degrees-minutes-seconds like 37°46'30"N 122°25'10"W.
+  function parseCoords(text) {
+    var t = String(text).trim().replace(/[º˚]/g, '°').replace(/[’′]/g, "'").replace(/[”″“]/g, '"');
+    var m, lat, lon;
+    function ok(a, b) { return isFinite(a) && isFinite(b) && Math.abs(a) <= 90 && Math.abs(b) <= 180 ? [a, b] : null; }
+    m = /^([NSns])?\s*(-?\d{1,3}(?:\.\d+)?)\s*°?\s*([NSns])?(?:\s*[,;]\s*|\s+)([EWew])?\s*(-?\d{1,3}(?:\.\d+)?)\s*°?\s*([EWew])?$/.exec(t);
+    if (m) {
+      if ((m[1] && m[3]) || (m[4] && m[6])) return null;
+      lat = parseFloat(m[2]); lon = parseFloat(m[5]);
+      var ns = (m[1] || m[3] || '').toUpperCase(), ew = (m[4] || m[6] || '').toUpperCase();
+      if (ns) lat = Math.abs(lat) * (ns === 'S' ? -1 : 1);
+      if (ew) lon = Math.abs(lon) * (ew === 'W' ? -1 : 1);
+      return ok(lat, lon);
+    }
+    m = /^(\d{1,3})\s*°\s*(?:(\d{1,2})\s*')?\s*(?:(\d{1,2}(?:\.\d+)?)\s*")?\s*([NSns])\s*[,;]?\s*(\d{1,3})\s*°\s*(?:(\d{1,2})\s*')?\s*(?:(\d{1,2}(?:\.\d+)?)\s*")?\s*([EWew])$/.exec(t);
+    if (m) {
+      lat = parseInt(m[1], 10) + (parseInt(m[2] || '0', 10) / 60) + (parseFloat(m[3] || '0') / 3600);
+      lon = parseInt(m[5], 10) + (parseInt(m[6] || '0', 10) / 60) + (parseFloat(m[7] || '0') / 3600);
+      if (m[4].toUpperCase() === 'S') lat = -lat;
+      if (m[8].toUpperCase() === 'W') lon = -lon;
+      return ok(lat, lon);
+    }
+    return null;
+  }
+
+  // NWS forecast periods -> current temperature (this hour's forecast) plus the next daytime high and night low.
+  function summarizeWeather(daily, hourly) {
+    var w = { now: null, high: null, highDay: null, low: null };
+    if (hourly && hourly[0] && isFinite(hourly[0].temperature)) w.now = Math.round(hourly[0].temperature);
+    (daily || []).slice(0, 4).forEach(function (p, i) {
+      if (!isFinite(p.temperature)) return;
+      if (p.isDaytime && w.high === null) { w.high = Math.round(p.temperature); w.highDay = i === 0 ? null : p.name; }
+      if (!p.isDaytime && w.low === null) w.low = Math.round(p.temperature);
+    });
+    return w;
+  }
+  function fmtTemp(w) {
+    var parts = [];
+    if (w.now !== null) parts.push('Now ' + w.now + '°F');
+    if (w.high !== null) parts.push('High ' + w.high + '°F' + (w.highDay ? ' (' + w.highDay + ')' : ''));
+    if (w.low !== null) parts.push('Low ' + w.low + '°F');
+    return parts.length ? parts.join(' \u00b7 ') : 'Temperature: unavailable';
+  }
+
   function sameSpot(a, b) { return Math.abs(a.lat - b.lat) < 0.0006 && Math.abs(a.lng - b.lng) < 0.0006; }
   function shortName(label) { return String(label).split(',').slice(0, 2).join(',').trim(); }
   function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
@@ -379,6 +426,33 @@
     });
   }
 
+  // NWS (api.weather.gov): the forecast grid cell for this spot. Current temperature is this hour's forecast.
+  var wxCache = {};
+  function fetchWeather(ll, signal, done) {
+    var key = ll.lat.toFixed(2) + ',' + ll.lng.toFixed(2);
+    var hit = wxCache[key];
+    if (hit && Date.now() - hit.t < 15 * 60000) { done(hit.text); return; }
+    function json(r) { if (!r.ok) { var e = new Error('http'); e.status = r.status; throw e; } return r.json(); }
+    fetch('https://api.weather.gov/points/' + ll.lat.toFixed(4) + ',' + ll.lng.toFixed(4), { signal: signal })
+      .then(json)
+      .then(function (pt) {
+        var p = pt.properties;
+        return Promise.all([
+          fetch(p.forecast, { signal: signal }).then(json),
+          fetch(p.forecastHourly, { signal: signal }).then(json)
+        ]);
+      })
+      .then(function (r) {
+        var text = fmtTemp(summarizeWeather(r[0].properties && r[0].properties.periods, r[1].properties && r[1].properties.periods));
+        wxCache[key] = { t: Date.now(), text: text };
+        if (!signal.aborted) done(text);
+      })
+      .catch(function (e) {
+        if (e.name === 'AbortError' || signal.aborted) return;
+        done(e.status === 404 ? 'Temperature: NWS covers the US only' : 'Temperature: unavailable');
+      });
+  }
+
   // Find a numeric pixel value anywhere in an identify response.
   function pickValue(d) {
     var list = (d && d.results) || [];
@@ -412,9 +486,10 @@
   }
 
   // Calls cb(state) each time something new is known: depth, then elevation (in either order).
-  function lookup(ll, signal, cb) {
-    var s = { head: null, note: '', elev: null, coords: ll.lat.toFixed(3) + ', ' + ll.lng.toFixed(3) };
+  function lookup(ll, signal, cb, withWeather) {
+    var s = { head: null, note: '', elev: null, temp: null, coords: ll.lat.toFixed(3) + ', ' + ll.lng.toFixed(3) };
     cb(s);
+    if (withWeather) fetchWeather(ll, signal, function (t) { if (signal.aborted) return; s.temp = t; cb(s); });
     fetchElevation(ll, signal, function (t) { if (signal.aborted) return; s.elev = t; cb(s); });
     var tries = working ? [working] : LAYER_OPTIONS;
     (function next(i) {
@@ -491,6 +566,7 @@
     qs('cardDepth').textContent = s.head || 'Reading snow depth…';
     var note = qs('cardNote');
     note.textContent = s.note; note.hidden = !s.note;
+    qs('cardTemp').textContent = s.temp == null ? 'Temperature: reading…' : s.temp;
     qs('cardElev').textContent = 'Elevation: ' + (s.elev || 'reading…');
     qs('cardCoords').textContent = s.coords;
   }
@@ -521,7 +597,7 @@
 
     if (sCtrl) sCtrl.abort();
     sCtrl = new AbortController();
-    lookup(ll, sCtrl.signal, renderCard);
+    lookup(ll, sCtrl.signal, renderCard, true);
     scheduleHash();
 
     if (!selTitle) {
@@ -828,10 +904,11 @@
 
   function goTo(r) {
     hideResults();
-    q.value = shortName(r.label);
+    q.value = r.coords ? r.lat.toFixed(4) + ', ' + r.lon.toFixed(4) : shortName(r.label);
     q.blur();
     closePanels();
-    select(L.latLng(r.lat, r.lon), r.label, { bbox: r.bbox, zoomTo: !r.bbox });
+    // a coordinate search has no name of its own; the card looks up the place name for it
+    select(L.latLng(r.lat, r.lon), r.coords ? null : r.label, { bbox: r.bbox, zoomTo: !r.bbox });
   }
 
   function render(list, jumpIfOne) {
@@ -849,7 +926,13 @@
     if (jumpIfOne && list.length === 1) goTo(list[0]);
   }
 
+  function coordResult(c) {
+    return { label: 'Go to coordinates ' + c[0].toFixed(4) + ', ' + c[1].toFixed(4), lat: c[0], lon: c[1], bbox: null, coords: true };
+  }
+
   function run(text, jumpIfOne) {
+    var c = parseCoords(text);
+    if (c) { if (sctrl) sctrl.abort(); sseq++; render([coordResult(c)], jumpIfOne); return; }
     if (sctrl) sctrl.abort();
     sctrl = new AbortController();
     var my = ++sseq;
@@ -864,7 +947,7 @@
     clearTimeout(stimer);
     var text = q.value.trim();
     if (text.length < 2) { if (sctrl) sctrl.abort(); sseq++; hideResults(); return; }
-    stimer = setTimeout(function () { run(text, false); }, 250);
+    stimer = setTimeout(function () { run(text, false); }, parseCoords(text) ? 0 : 250);
   });
 
   qs('searchForm').addEventListener('submit', function (e) {
