@@ -52,9 +52,6 @@
   #menu[hidden] { display: none; }
   #menu a { display: block; padding: 14px 20px; color: var(--ink-2); font-family: Arvo, Georgia, "Times New Roman", serif; font-size: 16px; text-decoration: none; }
   #menu a:hover, #menu a:focus-visible { background: var(--hover); outline: none; }
-  .menu-sep { height: 1px; background: var(--line); margin: 6px 0; }
-  #menu button { display: block; width: 100%; text-align: left; background: none; border: 0; padding: 14px 20px; color: var(--ink-2); font: 15px Arvo, Georgia, "Times New Roman", serif; cursor: pointer; }
-  #menu button:hover, #menu button:focus-visible { background: var(--hover); outline: none; }
   #menu a[aria-current="page"] { font-weight: 700; }
   header { justify-content: flex-start; }
   @media (max-height: 500px) { :root { --header-h: 48px; } header .tagline { display: none; } main { padding-top: 24px; } }
@@ -71,7 +68,7 @@
 <body>
 <header>
   <button class="menu-btn" id="menuBtn" type="button" aria-label="Menu" aria-expanded="false" aria-controls="menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
-  <nav id="menu" aria-label="Pages" hidden><a href="./">Map</a><a href="about.html" aria-current="page">About</a><div class="menu-sep" role="separator"></div><button type="button" id="themeBtn"></button></nav>
+  <nav id="menu" aria-label="Pages" hidden><a href="./">Map</a><a href="about.html" aria-current="page">About</a></nav>
   <a class="brand" href="https://snowlookout.com" aria-label="Snow Lookout home">
     <svg aria-hidden="true" viewBox="20 10 120 148" width="34" height="42"><path d="M80 152 C80 152 26 104 26 70 A54 54 0 1 1 134 70 C134 104 80 152 80 152 Z" fill="#a9c8de"/><circle cx="80" cy="70" r="40" fill="#10466c"/><clipPath id="pinclip"><circle cx="80" cy="70" r="40"/></clipPath><g clip-path="url(#pinclip)"><polygon points="98,58 130,112 66,112" fill="#5f8fb0"/><polygon points="72,34 112,112 32,112" fill="#fff"/><polygon points="72,34 92,72 82,66 72,76 62,66 52,72" fill="#a9c8de"/><polygon points="72,34 80,50 76,47 72,53 68,47 64,50" fill="#fff"/></g><circle cx="106" cy="44" r="7" fill="#ff8a4c"/></svg>
     <div>
@@ -97,17 +94,6 @@
   btn.addEventListener('click', function (e) { e.stopPropagation(); set(menu.hidden); });
   document.addEventListener('click', function (e) { if (!menu.contains(e.target)) set(false); });
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape') set(false); });
-  var KEY = 'snowlookout.prefs.v1', themeBtn = document.getElementById('themeBtn');
-  function read() { try { return JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) { return {}; } }
-  var theme = read().theme === 'light' || read().theme === 'dark' ? read().theme : 'auto';
-  function sync() {
-    themeBtn.textContent = 'Theme: ' + { auto: 'Auto', light: 'Light', dark: 'Dark' }[theme];
-    if (theme === 'auto') document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme', theme);
-  }
-  themeBtn.addEventListener('click', function () {
-    theme = theme === 'auto' ? 'light' : theme === 'light' ? 'dark' : 'auto';
-    var p = read(); p.theme = theme; try { localStorage.setItem(KEY, JSON.stringify(p)); } catch (e) {}
-    sync();
   });
   sync();
 })();

@@ -96,19 +96,23 @@
   #menu a { display: block; padding: 14px 20px; color: var(--ink-2); font-family: Arvo, Georgia, "Times New Roman", serif; font-size: 16px; text-decoration: none; }
   #menu a:hover, #menu a:focus-visible { background: var(--bg); outline: none; }
   #menu a[aria-current="page"] { font-weight: 700; }
-  .menu-sep { height: 1px; background: var(--line); margin: 6px 0; }
-  #menu button { display: block; width: 100%; text-align: left; background: none; border: 0; padding: 14px 20px; color: var(--ink-2); font: 15px Arvo, Georgia, "Times New Roman", serif; cursor: pointer; }
-  #menu button:hover, #menu button:focus-visible { background: var(--hover); outline: none; }
   #search { margin-left: auto; }
 
   /* map buttons: my location, saved places, color key */
   .sl-ctl a { display: flex !important; align-items: center; justify-content: center; color: var(--ink-2); cursor: pointer; }
-  .sl-ctl a svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .sl-ctl a svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
   .sl-ctl a.on, .sl-ctl a.on:hover { background-color: var(--accent-bg); color: var(--accent-fg); }
   .sl-ctl a.busy { opacity: .5; }
+  /* map buttons (zoom, my location, saved places, layers): 40px */
+  .leaflet-bar a, .leaflet-touch .leaflet-bar a { width: 40px; height: 40px; line-height: 40px; }
+  .leaflet-touch .leaflet-bar a:first-child, .leaflet-touch .leaflet-bar a:last-child { width: 40px; height: 40px; }
+  .leaflet-bar a.leaflet-control-zoom-in, .leaflet-bar a.leaflet-control-zoom-out { font-size: 22px; }
+  /* 4px corners on the map buttons */
+  .leaflet-bar, .leaflet-touch .leaflet-bar { border-radius: 4px; }
+  .leaflet-bar a, .leaflet-touch .leaflet-bar a { border-radius: 0; }
+  .leaflet-bar a:first-child, .leaflet-touch .leaflet-bar a:first-child { border-top-left-radius: 4px; border-top-right-radius: 4px; }
+  .leaflet-bar a:last-child, .leaflet-touch .leaflet-bar a:last-child { border-bottom-left-radius: 4px; border-bottom-right-radius: 4px; }
   @media (pointer: coarse) {
-    .leaflet-bar a, .leaflet-touch .leaflet-bar a { width: 42px; height: 42px; line-height: 42px; }
-    .leaflet-touch .leaflet-bar a:first-child, .leaflet-touch .leaflet-bar a:last-child { width: 42px; height: 42px; }
     #search input { font-size: 16px; }
     #search form { height: 40px; }
     #search button { width: 42px; }
@@ -133,6 +137,7 @@
   .wx-icon { font-size: 20px; margin-right: 6px; vertical-align: -2px; }
   #cardTemp { font-weight: 600; color: var(--ink-2) !important; font-size: 15px !important; }
   #cardSnowFc { font-size: 14px; }
+  .alink[hidden] { display: none; }
   .alink { display: inline-block; margin-top: 10px; color: var(--ink-2); font-size: 14px; }
   #card .line { font-size: 14px; color: var(--muted); margin: 2px 0; word-break: break-word; }
   #card .actions { display: flex; gap: 8px; margin-top: 12px; }
@@ -173,11 +178,21 @@
   .panel label.opt { display: flex; align-items: center; gap: 10px; padding: 9px 2px; font-size: 15px; cursor: pointer; }
   .panel input[type=radio], .panel input[type=range] { accent-color: var(--accent-bg); }
   .panel input[type=radio] { width: 18px; height: 18px; margin: 0; }
+  .nlink:focus-visible { outline: 2px solid var(--ink-2); outline-offset: 2px; }
   .opacity { margin-top: 8px; padding-top: 10px; border-top: 1px solid var(--line); }
   .opacity label { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 6px; }
   .opacity input { width: 100%; }
   .hint { margin: 10px 0 6px; color: var(--muted); font-size: 13px; }
-  #sweLegend img { display: block; background: #fff; border-radius: 6px; padding: 4px; max-width: 100%; height: auto; }
+  .panel.right { left: auto; right: 10px; top: calc(var(--header-h) + 62px); width: min(300px, calc(100vw - 20px)); max-height: calc(100% - var(--header-h) - var(--footer-h) - 74px); }
+  .panel h2:not(:first-child) { margin-top: 16px; }
+  .nlink { display: inline-block; margin-top: 10px; color: var(--ink-2); font-size: 14px; }
+  .seg { display: flex; border: 1px solid var(--ink-2); border-radius: 8px; overflow: hidden; }
+  .seg label { position: relative; flex: 1; }
+  .seg input { position: absolute; opacity: 0; pointer-events: none; }
+  .seg span { display: block; text-align: center; padding: 10px 6px; font-size: 14px; cursor: pointer; }
+  .seg label + label span { border-left: 1px solid var(--ink-2); }
+  .seg input:checked + span { background: var(--accent-bg); color: var(--accent-fg); }
+  .seg input:focus-visible + span { outline: 2px solid var(--ink-2); outline-offset: -3px; }
   .sl-pin { background: none; border: 0; }
   .sl-pin svg { display: block; filter: drop-shadow(0 1px 2px rgba(0,0,0,.45)); }
   @media (max-width: 480px) { header { gap: 8px; padding: 0 12px; } header .name { font-size: 17px; } header .tagline { font-size: 11px; } .brand { gap: 8px; } }
@@ -187,7 +202,7 @@
 <h1 class="sr-only">Snow Lookout: interactive snow depth map</h1>
 <header>
   <button class="menu-btn" id="menuBtn" type="button" aria-label="Menu" aria-expanded="false" aria-controls="menu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
-  <nav id="menu" aria-label="Pages" hidden><a href="./" aria-current="page">Map</a><a href="about.html">About</a><div class="menu-sep" role="separator"></div><button type="button" id="unitsBtn"></button><button type="button" id="themeBtn"></button></nav>
+  <nav id="menu" aria-label="Pages" hidden><a href="./" aria-current="page">Map</a><a href="about.html">About</a></nav>
   <a class="brand" href="https://snowlookout.com" aria-label="Snow Lookout home">
     <svg aria-hidden="true" viewBox="20 10 120 148" width="34" height="42"><path d="M80 152 C80 152 26 104 26 70 A54 54 0 1 1 134 70 C134 104 80 152 80 152 Z" fill="#a9c8de"/><circle cx="80" cy="70" r="40" fill="#10466c"/><clipPath id="pinclip"><circle cx="80" cy="70" r="40"/></clipPath><g clip-path="url(#pinclip)"><polygon points="98,58 130,112 66,112" fill="#5f8fb0"/><polygon points="72,34 112,112 32,112" fill="#fff"/><polygon points="72,34 92,72 82,66 72,76 62,66 52,72" fill="#a9c8de"/><polygon points="72,34 80,50 76,47 72,53 68,47 64,50" fill="#fff"/></g><circle cx="106" cy="44" r="7" fill="#ff8a4c"/></svg>
     <div>
@@ -213,6 +228,7 @@
   <div id="cardTitle"></div>
   <div id="cardDepth" aria-live="polite"></div>
   <div class="line" id="cardTemp"></div>
+  <div class="line" id="cardRecent" hidden></div>
   <div class="line" id="cardSnowFc" hidden></div>
   <div class="line" id="cardNote" hidden></div>
   <div class="line" id="cardElev"></div>
@@ -229,18 +245,27 @@
   <div id="savedList"></div>
 </section>
 
-<section id="snowPanel" class="panel" aria-label="Snow layer" hidden>
+<section id="layersPanel" class="panel right" aria-label="Layers and settings" hidden>
+  <h2>Map</h2>
+  <div id="baseList"></div>
   <h2>Snow layer</h2>
-  <label class="opt"><input type="radio" name="snowLayer" value="depth" checked> Snow depth</label>
-  <label class="opt"><input type="radio" name="snowLayer" value="swe"> Snow water equivalent</label>
-  <label class="opt"><input type="radio" name="snowLayer" value="off"> Off</label>
+  <label class="opt"><input type="radio" name="snowLayer" value="depth" checked><span>Snow depth</span></label>
+  <label class="opt"><input type="radio" name="snowLayer" value="off"><span>Off</span></label>
   <div class="opacity">
     <label for="opacity"><span>Opacity</span><output id="opacityOut" for="opacity">80%</output></label>
     <input type="range" id="opacity" min="10" max="100" step="5" value="80">
   </div>
-  <div id="sweLegend" hidden>
-    <p class="hint">Snow water equivalent is how much water the snow would give if it melted. Hovering or tapping the map always reports snow depth. NOAA's color key:</p>
-    <img id="sweLegendImg" alt="NOAA color key for snow water equivalent">
+  <a class="nlink" href="https://www.nohrsc.noaa.gov/interactive/html/map.html?var=snowfall_24_h&amp;snap=1&amp;bgvar=dem&amp;shdvar=shading&amp;o9=1&amp;o13=1" target="_blank" rel="noopener">Recent snowfall map (NOAA) &#8599;</a>
+  <h2>Units</h2>
+  <div class="seg" role="radiogroup" aria-label="Units">
+    <label><input type="radio" name="units" value="imperial"><span>Imperial</span></label>
+    <label><input type="radio" name="units" value="metric"><span>Metric</span></label>
+  </div>
+  <h2>Theme</h2>
+  <div class="seg" role="radiogroup" aria-label="Theme">
+    <label><input type="radio" name="theme" value="auto"><span>Auto</span></label>
+    <label><input type="radio" name="theme" value="light"><span>Light</span></label>
+    <label><input type="radio" name="theme" value="dark"><span>Dark</span></label>
   </div>
 </section>
 
@@ -275,6 +300,7 @@
   var STORE_KEY = 'snowlookout.saved.v1';
   // How the card shows temperatures. 'long':  \u26c5 52\u00b0F \u00b7 High 61\u00b0F \u00b7 Low 38\u00b0F    'short':  \u26c5 52\u00b0F  \u219161\u00b0 \u219338\u00b0
   var TEMP_STYLE = 'long';
+  var SHOW_RECENT = false;   // recent snowfall estimate on the card: off for now
 
   // Visitor preferences, shared with the other pages: units ('imperial' | 'metric') and theme ('auto' | 'light' | 'dark').
   var PREF_KEY = 'snowlookout.prefs.v1';
@@ -310,7 +336,7 @@
       } else if (k === 'b') {
         if (/^[a-z]{2,12}$/.test(v)) out.b = v;
       } else if (k === 's') {
-        out.s = v === '0' ? 'off' : v === 'w' ? 'swe' : 'depth';
+        out.s = v === '0' ? 'off' : 'depth';
       } else if (k === 'o') {
         var o = num(v);
         if (o !== null && o >= 10 && o <= 100) out.o = Math.round(o);
@@ -326,7 +352,7 @@
     p.push('z=' + (Math.round(s.z * 100) / 100));
     p.push('c=' + s.c[0].toFixed(4) + ',' + s.c[1].toFixed(4));
     if (s.b) p.push('b=' + s.b);
-    if (s.s === 'off') p.push('s=0'); else if (s.s === 'swe') p.push('s=w');
+    if (s.s === 'off') p.push('s=0');
     if (s.o != null && s.o !== 80) p.push('o=' + s.o);
     if (s.p) {
       p.push('p=' + s.p[0].toFixed(5) + ',' + s.p[1].toFixed(5));
@@ -390,10 +416,15 @@
     if (v < 0.05) return '0' + unit;
     return (v < 10 ? v.toFixed(1) : String(Math.round(v))) + unit;
   }
+  // Only what matters: snow expected in the next 24 h wins; otherwise snow later in the next 3 days; otherwise nothing.
   function fmtSnowForecast(sn, system) {
     if (!sn) return '';
-    if (sn.h72 / 25.4 < 0.05) return 'No snow expected in the next 3 days';
-    return 'Snow forecast: ' + fmtSnowAmt(sn.h24, system) + ' next 24 h · ' + fmtSnowAmt(sn.h72, system) + ' next 3 days';
+    var MIN = 25.4 * 0.05;   // under 0.05 in rounds to "0"
+    var a24 = fmtSnowAmt(sn.h24, system), a72 = fmtSnowAmt(sn.h72, system);
+    function zero(t) { return /^0(\.0)? /.test(t); }
+    if (sn.h24 >= MIN && !zero(a24)) return 'Snow forecast: ' + a24 + ' next 24 h';
+    if (sn.h72 >= MIN && !zero(a72)) return 'Snow forecast: ' + a72 + ' next 3 days';
+    return '';
   }
 
   // NOAA refreshes the snow analysis at 01, 05, 11 and 17 UTC. This is the most recent of those
@@ -501,6 +532,92 @@
     return parts.join(' · ');
   }
 
+  // Open-Meteo hourly snowfall (cm; each value is the hour ending at its time, UTC) -> mm over the last 24 h and 72 h.
+  function summarizeRecent(hourly, nowMs) {
+    if (!hourly || !Array.isArray(hourly.time) || !Array.isArray(hourly.snowfall)) return null;
+    function sum(hours) {
+      var from = nowMs - hours * 36e5, total = 0;
+      for (var i = 0; i < hourly.time.length; i++) {
+        var t = Date.parse(hourly.time[i] + 'Z'), v = hourly.snowfall[i];
+        if (isFinite(t) && v != null && isFinite(v) && t > from && t <= nowMs) total += v;
+      }
+      return total * 10;
+    }
+    return { h24: sum(24), h72: sum(72) };
+  }
+  function fmtRecentSnow(r, system) {
+    if (!r) return '';
+    if (r.h72 / 25.4 < 0.05) return 'No snowfall in the past 3 days (est.)';
+    return 'Recent snowfall (est.): ' + fmtSnowAmt(r.h24, system) + ' past 24 h · ' + fmtSnowAmt(r.h72, system) + ' past 3 days';
+  }
+
+  // Avalanche forecast zones (GeoJSON from api.avalanche.org): keep name, link and polygons, then find the zone holding a point.
+  function safeHttps(u) {
+    try { var x = new URL(String(u)); return x.protocol === 'https:' ? x.href : null; } catch (e) { return null; }
+  }
+  function prepareZones(gj) {
+    var out = [];
+    ((gj && gj.features) || []).forEach(function (f) {
+      var g = f && f.geometry, p = (f && f.properties) || {};
+      if (!g || !p.name) return;
+      var polys = g.type === 'Polygon' ? [g.coordinates] : g.type === 'MultiPolygon' ? g.coordinates : null;
+      if (!polys) return;
+      var w = 181, e = -181, so = 91, n = -91;
+      polys.forEach(function (poly) { (poly[0] || []).forEach(function (c) {
+        if (c[0] < w) w = c[0]; if (c[0] > e) e = c[0]; if (c[1] < so) so = c[1]; if (c[1] > n) n = c[1];
+      }); });
+      out.push({ name: String(p.name), center: String(p.center || ''), link: safeHttps(p.link) || safeHttps(p.center_link), polys: polys, bbox: [w, so, e, n] });
+    });
+    return out;
+  }
+  function inRing(lng, lat, ring) {
+    var inside = false;
+    for (var i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+      var xi = ring[i][0], yi = ring[i][1], xj = ring[j][0], yj = ring[j][1];
+      if ((yi > lat) !== (yj > lat) && lng < (xj - xi) * (lat - yi) / (yj - yi) + xi) inside = !inside;
+    }
+    return inside;
+  }
+  function zoneAt(zones, lat, lng) {
+    for (var i = 0; i < zones.length; i++) {
+      var z = zones[i], b = z.bbox;
+      if (lng < b[0] || lng > b[2] || lat < b[1] || lat > b[3]) continue;
+      for (var k = 0; k < z.polys.length; k++) {
+        var poly = z.polys[k];
+        if (!poly[0] || !inRing(lng, lat, poly[0])) continue;
+        var hole = false;
+        for (var h = 1; h < poly.length; h++) if (inRing(lng, lat, poly[h])) { hole = true; break; }
+        if (!hole) return z;
+      }
+    }
+    return null;
+  }
+
+  // Distance in km from a point to the nearest edge of a zone (0 if inside); flat-earth approximation, fine at this scale.
+  function zoneDistanceKm(z, lat, lng) {
+    var kx = 111.32 * Math.cos(lat * Math.PI / 180), ky = 110.57;
+    var b = z.bbox;
+    var dx = Math.max(b[0] - lng, 0, lng - b[2]) * kx, dy = Math.max(b[1] - lat, 0, lat - b[3]) * ky;
+    return Math.sqrt(dx * dx + dy * dy);   // a lower bound on the true distance
+  }
+  function nearestZone(zones, lat, lng) {
+    var kx = 111.32 * Math.cos(lat * Math.PI / 180), ky = 110.57, best = null, bestKm = Infinity;
+    zones.forEach(function (z) {
+      if (zoneDistanceKm(z, lat, lng) >= bestKm) return;
+      z.polys.forEach(function (poly) {
+        var ring = poly[0] || [];
+        for (var i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+          var ax = (ring[j][0] - lng) * kx, ay = (ring[j][1] - lat) * ky, bx = (ring[i][0] - lng) * kx, by = (ring[i][1] - lat) * ky;
+          var vx = bx - ax, vy = by - ay, len2 = vx * vx + vy * vy;
+          var t = len2 ? Math.max(0, Math.min(1, -(ax * vx + ay * vy) / len2)) : 0;
+          var d = Math.sqrt(Math.pow(ax + t * vx, 2) + Math.pow(ay + t * vy, 2));
+          if (d < bestKm) { bestKm = d; best = z; }
+        }
+      });
+    });
+    return best ? { zone: best, km: bestKm } : null;
+  }
+
   function sameSpot(a, b) { return Math.abs(a.lat - b.lat) < 0.0006 && Math.abs(a.lng - b.lng) < 0.0006; }
   function shortName(label) { return String(label).split(',').slice(0, 2).join(',').trim(); }
   function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
@@ -540,38 +657,52 @@
   var currentBaseKey = startDef.key;
   startDef.layer.addTo(map);
 
-  // NOAA's service has two maps: snow depth (WMS layer 5) and snow water equivalent (WMS layer 1).
-  function snowWms(layer, label) {
-    return L.tileLayer.wms(WMS, {
-      layers: layer, format: 'image/png', transparent: true, version: '1.1.1', opacity: 0.8, zIndex: 10,
-      attribution: label + ': NOAA / NWS / NOHRSC'
-    });
-  }
-  var snowDepth = snowWms('5', 'Snow depth'), snowSwe = snowWms('1', 'Snow water equivalent');
+  // NOAA snow depth (WMS layer 5 of the NOHRSC Snow Analysis service).
+  var snowDepth = L.tileLayer.wms(WMS, {
+    layers: '5', format: 'image/png', transparent: true, version: '1.1.1', opacity: 0.8, zIndex: 10,
+    attribution: 'Snow depth: NOAA / NWS / NOHRSC'
+  });
   var snowMode = 'depth', snowOpacity = 80;
 
   function syncSnowUI() {
     Array.prototype.forEach.call(document.querySelectorAll('input[name=snowLayer]'), function (r) { r.checked = r.value === snowMode; });
     qs('opacity').value = snowOpacity;
     qs('opacityOut').textContent = snowOpacity + '%';
-    var legend = qs('sweLegend');
-    legend.hidden = snowMode !== 'swe';
-    var img = qs('sweLegendImg');
-    if (snowMode === 'swe' && !img.getAttribute('src')) img.src = WMS + '?request=GetLegendGraphic&version=1.3.0&format=image/png&layer=1';
   }
   function setSnow(mode) {
     snowMode = mode;
-    [snowDepth, snowSwe].forEach(function (l) { if (map.hasLayer(l)) map.removeLayer(l); });
-    if (mode === 'depth') snowDepth.addTo(map); else if (mode === 'swe') snowSwe.addTo(map);
+    if (mode === 'depth') { if (!map.hasLayer(snowDepth)) snowDepth.addTo(map); }
+    else if (map.hasLayer(snowDepth)) map.removeLayer(snowDepth);
     syncSnowUI();
   }
   function setSnowOpacity(pct) {
     snowOpacity = pct;
-    snowDepth.setOpacity(pct / 100); snowSwe.setOpacity(pct / 100);
+    snowDepth.setOpacity(pct / 100);
     syncSnowUI();
   }
 
-  L.control.layers(baseLabels, {}, { position: 'topright', collapsed: true }).addTo(map);
+  // Base maps are chosen in the Layers panel.
+  function syncBaseUI() {
+    Array.prototype.forEach.call(document.querySelectorAll('input[name=baseMap]'), function (r) { r.checked = r.value === currentBaseKey; });
+  }
+  function setBase(key) {
+    if (!baseByKey[key] || key === currentBaseKey) return;
+    baseDefs.forEach(function (d) { if (map.hasLayer(d.layer)) map.removeLayer(d.layer); });
+    baseByKey[key].layer.addTo(map);
+    currentBaseKey = key;
+    syncBaseUI();
+  }
+  (function buildBaseList() {
+    var box = qs('baseList');
+    baseDefs.forEach(function (d) {
+      var l = document.createElement('label'); l.className = 'opt';
+      var i = document.createElement('input'); i.type = 'radio'; i.name = 'baseMap'; i.value = d.key;
+      i.addEventListener('change', function () { if (i.checked) { setBase(d.key); scheduleHash(); } });
+      var t = document.createElement('span'); t.textContent = d.label;
+      l.appendChild(i); l.appendChild(t); box.appendChild(l);
+    });
+    syncBaseUI();
+  })();
 
   setSnowOpacity(startHash.o != null ? startHash.o : 80);
   setSnow(startHash.s || 'depth');
@@ -643,6 +774,23 @@
       });
   }
 
+  // Recent snowfall at a spot: Open-Meteo's modelled hourly snowfall for the last 3 days (a model estimate, not a measurement).
+  var recentCache = {};
+  function fetchRecent(ll, signal, done) {
+    var key = ll.lat.toFixed(2) + ',' + ll.lng.toFixed(2);
+    var hit = recentCache[key];
+    if (hit && Date.now() - hit.t < 30 * 60000) { done(hit.r); return; }
+    fetch('https://api.open-meteo.com/v1/forecast?latitude=' + ll.lat.toFixed(3) + '&longitude=' + ll.lng.toFixed(3) +
+        '&hourly=snowfall&past_days=3&forecast_days=1&timezone=UTC', { signal: signal })
+      .then(function (r) { if (!r.ok) throw new Error('meteo'); return r.json(); })
+      .then(function (j) {
+        var r = summarizeRecent(j.hourly, Date.now());
+        recentCache[key] = { t: Date.now(), r: r };
+        if (!signal.aborted) done(r);
+      })
+      .catch(function (e) { if (e.name !== 'AbortError' && !signal.aborted) done(false); });
+  }
+
   // Find a numeric pixel value anywhere in an identify response.
   function pickValue(d) {
     var list = (d && d.results) || [];
@@ -678,9 +826,12 @@
   // Calls cb(state) each time something new is known: depth, then elevation (in either order).
   // The state holds raw numbers (depth in source units, elevation in feet) and is formatted when drawn.
   function lookup(ll, signal, cb, withWeather) {
-    var s = { head: null, raw: null, note: '', elevFt: null, elevFail: false, temp: null, coords: ll.lat.toFixed(3) + ', ' + ll.lng.toFixed(3) };
+    var s = { head: null, raw: null, note: '', elevFt: null, elevFail: false, temp: null, recent: null, coords: ll.lat.toFixed(3) + ', ' + ll.lng.toFixed(3) };
     cb(s);
-    if (withWeather) fetchWeather(ll, signal, function (t) { if (signal.aborted) return; s.temp = t; cb(s); });
+    if (withWeather) {
+      fetchWeather(ll, signal, function (t) { if (signal.aborted) return; s.temp = t; cb(s); });
+      if (SHOW_RECENT) fetchRecent(ll, signal, function (r) { if (signal.aborted) return; s.recent = r; cb(s); });
+    }
     fetchElevation(ll, signal, function (ft) {
       if (signal.aborted) return;
       if (ft == null) s.elevFail = true; else s.elevFt = ft;
@@ -781,6 +932,13 @@
     el.textContent = text; el.hidden = !text;
   }
 
+  function renderRecent(r) {
+    var el = qs('cardRecent');
+    var text = SHOW_RECENT && r && typeof r === 'object' ? fmtRecentSnow(r, prefs.units) : '';
+    el.textContent = text; el.hidden = !text;
+    el.title = text ? 'Modelled estimate from Open-Meteo, not a measurement' : '';
+  }
+
   var lastCardState = null;
   function renderCard(s) {
     lastCardState = s;
@@ -789,8 +947,50 @@
     note.textContent = s.note; note.hidden = !s.note;
     renderTemp(s.temp);
     renderSnowFc(s.temp);
+    renderRecent(s.recent);
+    // avalanche link: only where NOAA reports snow (or when we can't tell because NOAA could not be reached)
+    var snowy = s.raw != null && s.raw * (SOURCE_UNIT === 'm' ? 39.3701 : SOURCE_UNIT === 'mm' ? 1 / 25.4 : 1) >= 0.05;
+    qs('avyLink').hidden = !(snowy || (s.raw == null && s.head === 'Unavailable'));
     qs('cardElev').textContent = 'Elevation: ' + elevText(s);
     qs('cardCoords').textContent = s.coords;
+  }
+
+  // ---- avalanche forecast for the spot's zone (zones from api.avalanche.org) ----
+  var AVY_MAX_KM = 300;   // a "closest" zone farther away than this is not useful
+  var AVY_HOME = 'https://avalanche.org/', AVY_API = 'https://api.avalanche.org/v2/public/products/map-layer';
+  var zonesP = null, zonesFailedAt = 0, avySeq = 0, avyEl = qs('avyLink');
+  function loadZones() {
+    if (zonesP) return zonesP;
+    if (Date.now() - zonesFailedAt < 300000) return Promise.resolve(null);
+    zonesP = fetch(AVY_API)
+      .then(function (r) { if (!r.ok) throw new Error('avy'); return r.json(); })
+      .then(function (j) { var z = prepareZones(j); if (!z.length) throw new Error('avy'); return z; })
+      .catch(function () { zonesP = null; zonesFailedAt = Date.now(); return null; });
+    return zonesP;
+  }
+  function updateAvy(ll) {
+    var mine = ++avySeq;
+    avyEl.href = AVY_HOME; avyEl.textContent = 'Avalanche forecast \u2197'; avyEl.title = '';
+    loadZones().then(function (zones) {
+      if (mine !== avySeq || !zones || !selLL) return;
+      var z = zoneAt(zones, ll.lat, ll.lng);
+      if (z && z.link) {
+        avyEl.href = z.link;
+        avyEl.textContent = 'Avalanche forecast: ' + z.name + ' \u2197';
+        avyEl.title = z.center ? 'Issued by ' + z.center : '';
+      } else if (!z) {
+        // no zone covers this spot: use the closest one, if there is one within reach
+        var near = nearestZone(zones.filter(function (q) { return q.link; }), ll.lat, ll.lng);
+        if (near && near.km <= AVY_MAX_KM) {
+          var dist = prefs.units === 'metric' ? Math.round(near.km) + ' km' : Math.round(near.km * 0.621) + ' mi';
+          avyEl.href = near.zone.link;
+          avyEl.textContent = 'Avalanche forecast: ' + near.zone.name + ' (closest) \u2197';
+          avyEl.title = 'About ' + dist + ' away' + (near.zone.center ? '. Issued by ' + near.zone.center : '');
+        } else {
+          avyEl.textContent = 'Avalanche forecasts (none nearby) \u2197';
+        }
+      }
+    });
   }
 
   function select(ll, title, opts) {
@@ -820,6 +1020,7 @@
     if (sCtrl) sCtrl.abort();
     sCtrl = new AbortController();
     lookup(ll, sCtrl.signal, renderCard, true);
+    updateAvy(ll);
     scheduleHash();
 
     if (!selTitle) {
@@ -993,19 +1194,11 @@
     hashTimer = setTimeout(writeHash, 300);
   }
   map.on('moveend', scheduleHash);
-  map.on('baselayerchange', function (e) {
-    baseDefs.forEach(function (d) { if (d.layer === e.layer) currentBaseKey = d.key; });
-    scheduleHash();
-  });
 
   function applyHash(h) {
     applying = true;
     if (h.c && h.z) map.setView(h.c, h.z);
-    if (h.b && baseByKey[h.b] && h.b !== currentBaseKey) {
-      baseDefs.forEach(function (d) { if (map.hasLayer(d.layer)) map.removeLayer(d.layer); });
-      baseByKey[h.b].layer.addTo(map);
-      currentBaseKey = h.b;
-    }
+    if (h.b) setBase(h.b);
     setSnowOpacity(h.o != null ? h.o : 80);
     setSnow(h.s || 'depth');
     applying = false;
@@ -1018,9 +1211,9 @@
   });
 
   // ---- map buttons and panels -----------------------------------------------
-  function makeControl(cls, title, svg, onClick) {
+  function makeControl(cls, title, svg, onClick, position) {
     var C = L.Control.extend({
-      options: { position: 'topleft' },
+      options: { position: position || 'topleft' },
       onAdd: function () {
         var div = L.DomUtil.create('div', 'leaflet-bar leaflet-control sl-ctl ' + cls);
         var a = L.DomUtil.create('a', '', div);
@@ -1036,11 +1229,11 @@
     return ctl.getContainer().querySelector('a');
   }
 
-  var savedPanel = qs('savedPanel'), snowPanel = qs('snowPanel');
-  var locateBtn, savedBtn, snowBtn;
+  var savedPanel = qs('savedPanel'), layersPanel = qs('layersPanel');
+  var locateBtn, savedBtn, layersBtn;
   function closePanels() {
-    savedPanel.hidden = true; snowPanel.hidden = true;
-    [savedBtn, snowBtn].forEach(function (b) { if (b) { b.classList.remove('on'); b.setAttribute('aria-expanded', 'false'); } });
+    savedPanel.hidden = true; layersPanel.hidden = true;
+    [savedBtn, layersBtn].forEach(function (b) { if (b) { b.classList.remove('on'); b.setAttribute('aria-expanded', 'false'); } });
   }
   function togglePanel(panel, btn, onOpen) {
     var willOpen = panel.hidden;
@@ -1068,9 +1261,9 @@
     '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="1.5"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>', locate);
   savedBtn = makeControl('sl-saved', 'Saved places',
     '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/></svg>', function () { togglePanel(savedPanel, savedBtn, renderSaved); });
-  snowBtn = makeControl('sl-snow', 'Snow layer',
-    '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2v20M4.2 7l15.6 10M19.8 7L4.2 17"/><path d="M9.5 3.8L12 6.3l2.5-2.5M9.5 20.2L12 17.7l2.5 2.5"/></svg>', function () { togglePanel(snowPanel, snowBtn); });
-  savedBtn.setAttribute('aria-expanded', 'false'); snowBtn.setAttribute('aria-expanded', 'false');
+  layersBtn = makeControl('sl-layers', 'Layers and settings',
+    '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l9 5-9 5-9-5z"/><path d="M3 12.5l9 5 9-5"/><path d="M3 17l9 5 9-5"/></svg>', function () { togglePanel(layersPanel, layersBtn); }, 'topright');
+  savedBtn.setAttribute('aria-expanded', 'false'); layersBtn.setAttribute('aria-expanded', 'false');
 
   Array.prototype.forEach.call(document.querySelectorAll('input[name=snowLayer]'), function (r) {
     r.addEventListener('change', function () { if (r.checked) { setSnow(r.value); scheduleHash(); } });
@@ -1202,41 +1395,18 @@
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape') setMenu(false); });
   map.on('click movestart', function () { setMenu(false); });
 
-  var unitsBtn = qs('unitsBtn'), themeBtn = qs('themeBtn');
-  function syncPrefsUI() {
-    unitsBtn.textContent = 'Units: ' + (prefs.units === 'metric' ? 'Metric (cm, m, °C)' : 'Imperial (in, ft, °F)');
-    themeBtn.textContent = 'Theme: ' + { auto: 'Auto', light: 'Light', dark: 'Dark' }[prefs.theme];
-  }
-  unitsBtn.addEventListener('click', function () {
-    prefs.units = prefs.units === 'metric' ? 'imperial' : 'metric';
-    savePrefs(); syncPrefsUI();
-    if (lastCardState && !card.hidden) renderCard(lastCardState);
-    renderSaved();
+  // Units and theme (in the Layers panel)
+  Array.prototype.forEach.call(document.querySelectorAll('input[name=units], input[name=theme]'), function (r) {
+    r.checked = r.value === prefs[r.name];
+    r.addEventListener('change', function () {
+      if (!r.checked) return;
+      prefs[r.name] = r.value;
+      savePrefs();
+      if (r.name === 'theme') applyTheme();
+      else if (lastCardState && !card.hidden) renderCard(lastCardState);
+    });
   });
-  themeBtn.addEventListener('click', function () {
-    prefs.theme = prefs.theme === 'auto' ? 'light' : prefs.theme === 'light' ? 'dark' : 'auto';
-    savePrefs(); applyTheme(); syncPrefsUI();
-  });
-  applyTheme(); syncPrefsUI();
-
-  // ---- desktop: start centered on the visitor's approximate location (from their IP address) ----
-  // No permission prompt. Skipped when the link already has a view, and if the visitor has moved the map first.
-  if (canHover && !startHash.c) {
-    var userMoved = false;
-    map.on('dragstart', function () { userMoved = true; });
-    map.getContainer().addEventListener('wheel', function () { userMoved = true; }, { passive: true });
-    var lc = new AbortController(), lt = setTimeout(function () { lc.abort(); }, 5000);
-    fetch('https://get.geojs.io/v1/ip/geo.json', { signal: lc.signal })
-      .then(function (r) { if (!r.ok) throw new Error('geo'); return r.json(); })
-      .then(function (g) {
-        clearTimeout(lt);
-        var la = num(g.latitude), lo = num(g.longitude);
-        if (la === null || lo === null || Math.abs(la) > 90 || Math.abs(lo) > 180) return;
-        if (userMoved || selLL) return;
-        map.setView([la, lo], DESKTOP_ZOOM);
-      })
-      .catch(function () { clearTimeout(lt); });
-  }
+  applyTheme();
 
   // ---- start up: open a shared spot if the link has one ---------------------
   if (startHash.p) select(L.latLng(startHash.p[0], startHash.p[1]), startHash.n || null);
