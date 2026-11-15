@@ -930,6 +930,7 @@
     var el = qs('cardSnowFc');
     var text = w && typeof w === 'object' && w.snow ? fmtSnowForecast(w.snow, prefs.units) : '';
     el.textContent = text; el.hidden = !text;
+    return !!text;
   }
 
   function renderRecent(r) {
@@ -946,17 +947,17 @@
     var note = qs('cardNote');
     note.textContent = s.note; note.hidden = !s.note;
     renderTemp(s.temp);
-    renderSnowFc(s.temp);
+    var forecastSnow = renderSnowFc(s.temp);
     renderRecent(s.recent);
-    // avalanche link: only where NOAA reports snow (or when we can't tell because NOAA could not be reached)
+    // avalanche link: only with snow on the ground or in the forecast (or when we can't tell because NOAA could not be reached)
     var snowy = s.raw != null && s.raw * (SOURCE_UNIT === 'm' ? 39.3701 : SOURCE_UNIT === 'mm' ? 1 / 25.4 : 1) >= 0.05;
-    qs('avyLink').hidden = !(snowy || (s.raw == null && s.head === 'Unavailable'));
+    qs('avyLink').hidden = !(snowy || forecastSnow || (s.raw == null && s.head === 'Unavailable'));
     qs('cardElev').textContent = 'Elevation: ' + elevText(s);
     qs('cardCoords').textContent = s.coords;
   }
 
   // ---- avalanche forecast for the spot's zone (zones from api.avalanche.org) ----
-  var AVY_MAX_KM = 300;   // a "closest" zone farther away than this is not useful
+  var AVY_FALLBACK = 'https://www.sierraavalanchecenter.org';   // used when no zone covers the spot
   var AVY_HOME = 'https://avalanche.org/', AVY_API = 'https://api.avalanche.org/v2/public/products/map-layer';
   var zonesP = null, zonesFailedAt = 0, avySeq = 0, avyEl = qs('avyLink');
   function loadZones() {
@@ -979,16 +980,10 @@
         avyEl.textContent = 'Avalanche forecast: ' + z.name + ' \u2197';
         avyEl.title = z.center ? 'Issued by ' + z.center : '';
       } else if (!z) {
-        // no zone covers this spot: use the closest one, if there is one within reach
-        var near = nearestZone(zones.filter(function (q) { return q.link; }), ll.lat, ll.lng);
-        if (near && near.km <= AVY_MAX_KM) {
-          var dist = prefs.units === 'metric' ? Math.round(near.km) + ' km' : Math.round(near.km * 0.621) + ' mi';
-          avyEl.href = near.zone.link;
-          avyEl.textContent = 'Avalanche forecast: ' + near.zone.name + ' (closest) \u2197';
-          avyEl.title = 'About ' + dist + ' away' + (near.zone.center ? '. Issued by ' + near.zone.center : '');
-        } else {
-          avyEl.textContent = 'Avalanche forecasts (none nearby) \u2197';
-        }
+        // outside every forecast zone: send people to the Sierra Avalanche Center
+        avyEl.href = AVY_FALLBACK;
+        avyEl.textContent = 'Avalanche forecast: Sierra Avalanche Center \u2197';
+        avyEl.title = 'No forecast zone covers this spot';
       }
     });
   }
