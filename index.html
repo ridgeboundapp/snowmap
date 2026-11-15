@@ -178,14 +178,12 @@
   .panel label.opt { display: flex; align-items: center; gap: 10px; padding: 9px 2px; font-size: 15px; cursor: pointer; }
   .panel input[type=radio], .panel input[type=range] { accent-color: var(--accent-bg); }
   .panel input[type=radio] { width: 18px; height: 18px; margin: 0; }
-  .nlink:focus-visible { outline: 2px solid var(--ink-2); outline-offset: 2px; }
-  .opacity { margin-top: 8px; padding-top: 10px; border-top: 1px solid var(--line); }
-  .opacity label { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 6px; }
-  .opacity input { width: 100%; }
+  .panel h2.with-value { display: flex; justify-content: space-between; align-items: baseline; }
+  .panel h2 output { font: 400 14px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  #opacity { width: 100%; }
   .hint { margin: 10px 0 6px; color: var(--muted); font-size: 13px; }
   .panel.right { left: auto; right: 10px; top: calc(var(--header-h) + 62px); width: min(300px, calc(100vw - 20px)); max-height: calc(100% - var(--header-h) - var(--footer-h) - 74px); }
   .panel h2:not(:first-child) { margin-top: 16px; }
-  .nlink { display: inline-block; margin-top: 10px; color: var(--ink-2); font-size: 14px; }
   .seg { display: flex; border: 1px solid var(--ink-2); border-radius: 8px; overflow: hidden; }
   .seg label { position: relative; flex: 1; }
   .seg input { position: absolute; opacity: 0; pointer-events: none; }
@@ -251,11 +249,8 @@
   <h2>Snow layer</h2>
   <label class="opt"><input type="radio" name="snowLayer" value="depth" checked><span>Snow depth</span></label>
   <label class="opt"><input type="radio" name="snowLayer" value="off"><span>Off</span></label>
-  <div class="opacity">
-    <label for="opacity"><span>Opacity</span><output id="opacityOut" for="opacity">80%</output></label>
-    <input type="range" id="opacity" min="10" max="100" step="5" value="80">
-  </div>
-  <a class="nlink" href="https://www.nohrsc.noaa.gov/interactive/html/map.html?var=snowfall_24_h&amp;snap=1&amp;bgvar=dem&amp;shdvar=shading&amp;o9=1&amp;o13=1" target="_blank" rel="noopener">Recent snowfall map (NOAA) &#8599;</a>
+  <h2 class="with-value" id="opacityHeading"><span>Opacity</span><output id="opacityOut" for="opacity">80%</output></h2>
+  <input type="range" id="opacity" aria-labelledby="opacityHeading" min="10" max="100" step="5" value="80">
   <h2>Units</h2>
   <div class="seg" role="radiogroup" aria-label="Units">
     <label><input type="radio" name="units" value="imperial"><span>Imperial</span></label>
