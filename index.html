@@ -671,6 +671,7 @@
     startHash.z || (canHover ? DESKTOP_ZOOM : DEFAULT_VIEW.z)
   );
 
+  var SAVED_ZOOM = 14;   // zoom used when a saved place is opened
   var baseDefs = [];
   var traceUrl = TILE_PROXY ? TILE_PROXY.replace(/\/$/, '') + '/{z}/{x}/{y}.png'
     : /^[A-Za-z0-9]{16,64}$/.test(TRACESTRACK_KEY) ? 'https://tile.tracestrack.com/topo__/{z}/{x}/{y}.png?key=' + TRACESTRACK_KEY : '';
@@ -681,8 +682,6 @@
   baseDefs.push(
     { key: 'usgs', label: 'USGS Topo', layer: L.tileLayer('https://basemap.nationalmap.gov/arcgis/rest/services/USGSTopo/MapServer/tile/{z}/{y}/{x}', {
       // The service lists tiles to zoom 16. Zoom 17-18 is stretched. (detectRetina was tried and made the map text half size.)
-      maxZoom: 18, maxNativeZoom: 16, zIndex: 1, attribution: 'USGS The National Map' }) },
-    { key: 'imgtopo', label: 'USGS Imagery Topo', layer: L.tileLayer('https://basemap.nationalmap.gov/arcgis/rest/services/USGSImageryTopo/MapServer/tile/{z}/{y}/{x}', {
       maxZoom: 18, maxNativeZoom: 16, zIndex: 1, attribution: 'USGS The National Map' }) },
     { key: 'sat', label: 'Satellite', layer: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
       maxZoom: 18, zIndex: 1, attribution: 'Esri, Maxar, Earthstar Geographics' }) }
@@ -1102,7 +1101,7 @@
     if (opts.bbox && opts.bbox.every(function (n) { return isFinite(n); }) && opts.bbox[0] !== opts.bbox[1]) {
       map.fitBounds([[opts.bbox[0], opts.bbox[2]], [opts.bbox[1], opts.bbox[3]]], { maxZoom: 13 });
     } else if (opts.zoomTo) {
-      map.setView(ll, Math.max(map.getZoom(), 11));
+      map.setView(ll, opts.zoom || Math.max(map.getZoom(), 11));
     } else if (window.matchMedia('(max-height: 500px)').matches) {
       // landscape phone: the card sits at the left, so keep the pin clear of it
       var lp = map.latLngToContainerPoint(ll);
@@ -1236,7 +1235,7 @@
       go.appendChild(sm);
       go.addEventListener('click', function () {
         closePanels();
-        select(L.latLng(pl.lat, pl.lng), pl.name, { zoomTo: true });
+        select(L.latLng(pl.lat, pl.lng), pl.name, { zoomTo: true, zoom: SAVED_ZOOM });
       });
       var del = document.createElement('button'); del.type = 'button'; del.className = 'saved-del';
       del.setAttribute('aria-label', 'Remove ' + pl.name); del.innerHTML = '&times;';
