@@ -686,8 +686,9 @@
   var baseByKey = {}, baseLabels = {};
   baseDefs.forEach(function (d) { baseByKey[d.key] = d; baseLabels[d.label] = d.layer; });
 
-  var firstDef = baseByKey.tracestrack || baseByKey.usgs;
-  var startDef = (startHash.b && baseByKey[startHash.b]) || firstDef;
+  // Topo map that goes with the units: imperial -> USGS Topo (contours in feet), metric -> Tracestrack (meters).
+  function topoFor(units) { return units === 'metric' ? (baseByKey.tracestrack || baseByKey.usgs) : baseByKey.usgs; }
+  var startDef = (startHash.b && baseByKey[startHash.b]) || topoFor(prefs.units);
   var currentBaseKey = startDef.key;
   startDef.layer.addTo(map);
 
@@ -777,6 +778,7 @@
     baseByKey[key].layer.addTo(map);
     currentBaseKey = key;
     syncBaseUI();
+    if (map.getZoom() > map.getMaxZoom()) map.setZoom(map.getMaxZoom());   // e.g. USGS Topo stops at zoom 15
   }
   (function buildBaseList() {
     var box = qs('baseList');
@@ -1486,7 +1488,11 @@
       prefs[r.name] = r.value;
       savePrefs();
       if (r.name === 'theme') applyTheme();
-      else if (lastCardState && !card.hidden) renderCard(lastCardState);
+      else {
+        if (lastCardState && !card.hidden) renderCard(lastCardState);
+        // changing units also swaps between the two topo maps (satellite is left alone)
+        if (r.name === 'units' && (currentBaseKey === 'tracestrack' || currentBaseKey === 'usgs')) { setBase(topoFor(prefs.units).key); scheduleHash(); }
+      }
     });
   });
   applyTheme();
