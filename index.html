@@ -181,6 +181,8 @@
   .panel h2.with-value { display: flex; justify-content: space-between; align-items: baseline; }
   .panel h2 output { font: 400 14px system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
   #opacity { width: 100%; }
+  .slope-bar { height: 10px; border-radius: 5px; margin: 6px 0 4px; background: linear-gradient(90deg, #2f6bff, #9b59d0, #ff3b2f); }
+  .slope-labels { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); }
   .hint { margin: 10px 0 6px; color: var(--muted); font-size: 13px; }
   .panel.right { left: auto; right: 10px; top: calc(var(--header-h) + 62px); width: min(300px, calc(100vw - 20px)); max-height: calc(100% - var(--header-h) - var(--footer-h) - 74px); }
   .panel h2:not(:first-child) { margin-top: 16px; }
@@ -246,8 +248,14 @@
 <section id="layersPanel" class="panel right" aria-label="Layers and settings" hidden>
   <h2>Map</h2>
   <div id="baseList"></div>
-  <h2>Snow layer</h2>
+  <h2>Layers</h2>
   <label class="opt"><input type="radio" name="snowLayer" value="depth" checked><span>Snow depth</span></label>
+  <label class="opt"><input type="radio" name="snowLayer" value="slope"><span>Avalanche angle (30&deg;&ndash;50&deg;)</span></label>
+  <div id="slopeInfo" hidden>
+    <div class="slope-bar" role="img" aria-label="Color key: blue for north-facing slopes, purple for east and west, red for south-facing"></div>
+    <div class="slope-labels"><span>North</span><span>East / West</span><span>South</span></div>
+    <p class="hint" id="slopeZoom" hidden>Zoom in closer to see slopes.</p>
+  </div>
   <label class="opt"><input type="radio" name="snowLayer" value="off"><span>Off</span></label>
   <h2 class="with-value" id="opacityHeading"><span>Opacity</span><output id="opacityOut" for="opacity">80%</output></h2>
   <input type="range" id="opacity" aria-labelledby="opacityHeading" min="10" max="100" step="5" value="80">
@@ -331,7 +339,7 @@
       } else if (k === 'b') {
         if (/^[a-z]{2,12}$/.test(v)) out.b = v;
       } else if (k === 's') {
-        out.s = v === '0' ? 'off' : 'depth';
+        out.s = v === '0' ? 'off' : v === 'slope' ? 'slope' : 'depth';
       } else if (k === 'o') {
         var o = num(v);
         if (o !== null && o >= 10 && o <= 100) out.o = Math.round(o);
@@ -347,7 +355,7 @@
     p.push('z=' + (Math.round(s.z * 100) / 100));
     p.push('c=' + s.c[0].toFixed(4) + ',' + s.c[1].toFixed(4));
     if (s.b) p.push('b=' + s.b);
-    if (s.s === 'off') p.push('s=0');
+    if (s.s === 'off') p.push('s=0'); else if (s.s === 'slope') p.push('s=slope');
     if (s.o != null && s.o !== 80) p.push('o=' + s.o);
     if (s.p) {
       p.push('p=' + s.p[0].toFixed(5) + ',' + s.p[1].toFixed(5));
@@ -613,6 +621,39 @@
     return best ? { zone: best, km: bestKm } : null;
   }
 
+  // Avalanche terrain: slopes of 30-50 degrees, colored by the direction they face
+  // (north = blue, east/west = purple, south = red), drawn only where there is snow.
+  var SLOPE_MIN = 30, SLOPE_MAX = 50;
+  function aspectColor(t) {   // t: 0 = north-facing ... 1 = south-facing
+    var A = [47, 107, 255], B = [155, 89, 208], C = [255, 59, 47];
+    var f = t < 0.5 ? t * 2 : (t - 0.5) * 2, p = t < 0.5 ? A : B, q = t < 0.5 ? B : C;
+    return [Math.round(p[0] + (q[0] - p[0]) * f), Math.round(p[1] + (q[1] - p[1]) * f), Math.round(p[2] + (q[2] - p[2]) * f)];
+  }
+  // dem: RGBA pixels of an AWS "terrarium" elevation tile; snow: RGBA pixels of NOAA's snow depth map for the same tile
+  // (a pixel with any opacity has snow); size: tile width in pixels; pxM: metres per pixel; out: RGBA pixels to fill.
+  function renderSlope(dem, snow, size, pxM, out) {
+    var step = Math.max(1, Math.min(4, Math.ceil(20 / pxM)));   // measure slope over about 20 m or more
+    var d = step * pxM, z = new Float32Array(size * size), i, x, y;
+    for (i = 0; i < size * size; i++) z[i] = dem[i * 4] * 256 + dem[i * 4 + 1] + dem[i * 4 + 2] / 256 - 32768;
+    function at(px, py) { px = px < 0 ? 0 : px >= size ? size - 1 : px; py = py < 0 ? 0 : py >= size ? size - 1 : py; return z[py * size + px]; }
+    for (y = 0; y < size; y++) {
+      for (x = 0; x < size; x++) {
+        var o = (y * size + x) * 4;
+        if (snow[o + 3] < 20) continue;
+        var a = at(x - step, y - step), b = at(x, y - step), c = at(x + step, y - step),
+            l = at(x - step, y), r = at(x + step, y),
+            g = at(x - step, y + step), h = at(x, y + step), k = at(x + step, y + step);
+        var gx = ((c + 2 * r + k) - (a + 2 * l + g)) / (8 * d);   // rise per metre going east
+        var gs = ((g + 2 * h + k) - (a + 2 * b + c)) / (8 * d);   // rise per metre going south
+        var slope = Math.atan(Math.sqrt(gx * gx + gs * gs)) * 180 / Math.PI;
+        if (slope < SLOPE_MIN || slope > SLOPE_MAX) continue;
+        var bearing = Math.atan2(-gx, gs);                          // direction the slope faces, clockwise from north
+        var col = aspectColor((1 - Math.cos(bearing)) / 2);
+        out[o] = col[0]; out[o + 1] = col[1]; out[o + 2] = col[2]; out[o + 3] = 235;
+      }
+    }
+  }
+
   function sameSpot(a, b) { return Math.abs(a.lat - b.lat) < 0.0006 && Math.abs(a.lng - b.lng) < 0.0006; }
   function shortName(label) { return String(label).split(',').slice(0, 2).join(',').trim(); }
   function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
@@ -637,8 +678,6 @@
       maxZoom: 19, zIndex: 1, attribution: 'Tiles &copy; Tracestrack, Map data &copy; OpenStreetMap contributors' }) });
   }
   baseDefs.push(
-    { key: 'osm', label: 'OpenStreetMap', layer: L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19, zIndex: 1, attribution: '&copy; OpenStreetMap contributors' }) },
     { key: 'usgs', label: 'USGS Topo', layer: L.tileLayer('https://basemap.nationalmap.gov/arcgis/rest/services/USGSTopo/MapServer/tile/{z}/{y}/{x}', {
       maxZoom: 15, zIndex: 1, attribution: 'USGS The National Map' }) },
     { key: 'sat', label: 'Satellite', layer: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
@@ -659,20 +698,72 @@
   });
   var snowMode = 'depth', snowOpacity = 80;
 
+  // Avalanche slopes: built in the browser from AWS terrain tiles (elevation) masked by NOAA's snow depth map.
+  var AWS_DEM = 'https://s3.amazonaws.com/elevation-tiles-prod/terrarium/';
+  var SLOPE_MIN_ZOOM = 11;   // below this the elevation data is too coarse to say anything about slope angle
+  var slopeWarned = false;
+  function loadPixels(url) {
+    return new Promise(function (resolve, reject) {
+      var img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = function () {
+        try {
+          var c = document.createElement('canvas'); c.width = img.width; c.height = img.height;
+          var g = c.getContext('2d', { willReadFrequently: true });
+          g.drawImage(img, 0, 0);
+          resolve(g.getImageData(0, 0, c.width, c.height));
+        } catch (e) { reject(e); }
+      };
+      img.onerror = function () { reject(new Error('load')); };
+      img.src = url;
+    });
+  }
+  var SlopeLayer = L.GridLayer.extend({
+    createTile: function (coords, done) {
+      var tile = document.createElement('canvas');
+      tile.width = tile.height = 256;
+      var z = coords.z, n = Math.pow(2, z);
+      if (z < SLOPE_MIN_ZOOM || coords.y < 0 || coords.y >= n) { done(null, tile); return tile; }
+      var x = ((coords.x % n) + n) % n, y = coords.y;
+      var span = 40075016.68557849 / n, minx = -20037508.342789244 + x * span, maxy = 20037508.342789244 - y * span;
+      var wmsUrl = WMS + '?service=WMS&request=GetMap&version=1.1.1&layers=5&styles=&format=image/png&transparent=true&srs=EPSG:3857&width=256&height=256&bbox=' +
+        [minx, maxy - span, minx + span, maxy].join(',');
+      var lat = Math.atan(Math.sinh(Math.PI * (1 - 2 * (y + 0.5) / n))) * 180 / Math.PI;
+      var pxM = 156543.03392804097 / n * Math.cos(lat * Math.PI / 180);
+      Promise.all([loadPixels(AWS_DEM + z + '/' + x + '/' + y + '.png'), loadPixels(wmsUrl)]).then(function (r) {
+        if (r[0].width !== 256 || r[1].width !== 256) throw new Error('size');
+        var g = tile.getContext('2d'), out = g.createImageData(256, 256);
+        renderSlope(r[0].data, r[1].data, 256, pxM, out.data);
+        g.putImageData(out, 0, 0);
+        done(null, tile);
+      }).catch(function () {
+        if (!slopeWarned) { slopeWarned = true; toast('Could not load the terrain or snow data for the slope layer.'); }
+        done(null, tile);
+      });
+      return tile;
+    }
+  });
+  var slopeLayer = new SlopeLayer({ tileSize: 256, minZoom: SLOPE_MIN_ZOOM, maxNativeZoom: 15, opacity: 0.8, zIndex: 10,
+    attribution: 'Terrain: AWS Terrain Tiles (USGS 3DEP, SRTM)' });
+
   function syncSnowUI() {
     Array.prototype.forEach.call(document.querySelectorAll('input[name=snowLayer]'), function (r) { r.checked = r.value === snowMode; });
     qs('opacity').value = snowOpacity;
     qs('opacityOut').textContent = snowOpacity + '%';
+    qs('slopeInfo').hidden = snowMode !== 'slope';
+    qs('slopeZoom').hidden = map.getZoom() >= SLOPE_MIN_ZOOM;
   }
   function setSnow(mode) {
     snowMode = mode;
-    if (mode === 'depth') { if (!map.hasLayer(snowDepth)) snowDepth.addTo(map); }
-    else if (map.hasLayer(snowDepth)) map.removeLayer(snowDepth);
+    [['depth', snowDepth], ['slope', slopeLayer]].forEach(function (p) {
+      if (p[0] === mode) { if (!map.hasLayer(p[1])) p[1].addTo(map); }
+      else if (map.hasLayer(p[1])) map.removeLayer(p[1]);
+    });
     syncSnowUI();
   }
   function setSnowOpacity(pct) {
     snowOpacity = pct;
-    snowDepth.setOpacity(pct / 100);
+    snowDepth.setOpacity(pct / 100); slopeLayer.setOpacity(pct / 100);
     syncSnowUI();
   }
 
@@ -699,8 +790,10 @@
     syncBaseUI();
   })();
 
+  map.on('zoomend', syncSnowUI);
   setSnowOpacity(startHash.o != null ? startHash.o : 80);
   setSnow(startHash.s || 'depth');
+  if (startHash.s === 'slope' && map.getZoom() < SLOPE_MIN_ZOOM) toast('Zoom in closer to see avalanche slopes.');   // opened from a shared link
 
   // ---- small helpers --------------------------------------------------------
   var toastTimer = null;
