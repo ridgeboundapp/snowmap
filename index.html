@@ -176,6 +176,7 @@
   .leaflet-control-attribution a { color: var(--ink-2); }
   /* snow layer panel */
   .panel label.opt { display: flex; align-items: center; gap: 10px; padding: 9px 2px; font-size: 15px; cursor: pointer; }
+  .panel label.opt[hidden] { display: none; }
   .panel input[type=radio], .panel input[type=range] { accent-color: var(--accent-bg); }
   .panel input[type=radio] { width: 18px; height: 18px; margin: 0; }
   .panel h2.with-value { display: flex; justify-content: space-between; align-items: baseline; }
@@ -679,7 +680,10 @@
   }
   baseDefs.push(
     { key: 'usgs', label: 'USGS Topo', layer: L.tileLayer('https://basemap.nationalmap.gov/arcgis/rest/services/USGSTopo/MapServer/tile/{z}/{y}/{x}', {
-      maxZoom: 15, zIndex: 1, attribution: 'USGS The National Map' }) },
+      // The service lists tiles to zoom 16. Zoom 17-18 is stretched. detectRetina asks sharper screens for the next level up.
+      maxZoom: 18, maxNativeZoom: 16, detectRetina: true, zIndex: 1, attribution: 'USGS The National Map' }) },
+    { key: 'imgtopo', label: 'USGS Imagery Topo', layer: L.tileLayer('https://basemap.nationalmap.gov/arcgis/rest/services/USGSImageryTopo/MapServer/tile/{z}/{y}/{x}', {
+      maxZoom: 18, maxNativeZoom: 16, detectRetina: true, zIndex: 1, attribution: 'USGS The National Map' }) },
     { key: 'sat', label: 'Satellite', layer: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
       maxZoom: 18, zIndex: 1, attribution: 'Esri, Maxar, Earthstar Geographics' }) }
   );
@@ -688,7 +692,13 @@
 
   // Topo map that goes with the units: imperial -> USGS Topo (contours in feet), metric -> Tracestrack (meters).
   function topoFor(units) { return units === 'metric' ? (baseByKey.tracestrack || baseByKey.usgs) : baseByKey.usgs; }
-  var startDef = (startHash.b && baseByKey[startHash.b]) || topoFor(prefs.units);
+  // Tracestrack (meters) is hidden in imperial; USGS Topo (feet) is hidden in metric whenever Tracestrack is available.
+  function baseShown(key, units) {
+    if (key === 'tracestrack') return units === 'metric';
+    if (key === 'usgs') return units !== 'metric' || !baseByKey.tracestrack;
+    return true;
+  }
+  var startDef = (startHash.b && baseByKey[startHash.b] && baseShown(startHash.b, prefs.units) && baseByKey[startHash.b]) || topoFor(prefs.units);
   var currentBaseKey = startDef.key;
   startDef.layer.addTo(map);
 
@@ -770,6 +780,7 @@
 
   // Base maps are chosen in the Layers panel.
   function syncBaseUI() {
+    Array.prototype.forEach.call(document.querySelectorAll('input[name=baseMap]'), function (r) { r.closest('label').hidden = !baseShown(r.value, prefs.units); });
     Array.prototype.forEach.call(document.querySelectorAll('input[name=baseMap]'), function (r) { r.checked = r.value === currentBaseKey; });
   }
   function setBase(key) {
@@ -778,7 +789,7 @@
     baseByKey[key].layer.addTo(map);
     currentBaseKey = key;
     syncBaseUI();
-    if (map.getZoom() > map.getMaxZoom()) map.setZoom(map.getMaxZoom());   // e.g. USGS Topo stops at zoom 15
+    if (map.getZoom() > map.getMaxZoom()) map.setZoom(map.getMaxZoom());   // in case a map allows less zoom than the current one
   }
   (function buildBaseList() {
     var box = qs('baseList');
@@ -1491,7 +1502,10 @@
       else {
         if (lastCardState && !card.hidden) renderCard(lastCardState);
         // changing units also swaps between the two topo maps (satellite is left alone)
-        if (r.name === 'units' && (currentBaseKey === 'tracestrack' || currentBaseKey === 'usgs')) { setBase(topoFor(prefs.units).key); scheduleHash(); }
+        if (r.name === 'units') {
+          if (!baseShown(currentBaseKey, prefs.units)) { setBase(topoFor(prefs.units).key); scheduleHash(); }
+          syncBaseUI();
+        }
       }
     });
   });
