@@ -680,10 +680,10 @@
   }
   baseDefs.push(
     { key: 'usgs', label: 'USGS Topo', layer: L.tileLayer('https://basemap.nationalmap.gov/arcgis/rest/services/USGSTopo/MapServer/tile/{z}/{y}/{x}', {
-      // The service lists tiles to zoom 16. Zoom 17-18 is stretched. detectRetina asks sharper screens for the next level up.
-      maxZoom: 18, maxNativeZoom: 16, detectRetina: true, zIndex: 1, attribution: 'USGS The National Map' }) },
+      // The service lists tiles to zoom 16. Zoom 17-18 is stretched. (detectRetina was tried and made the map text half size.)
+      maxZoom: 18, maxNativeZoom: 16, zIndex: 1, attribution: 'USGS The National Map' }) },
     { key: 'imgtopo', label: 'USGS Imagery Topo', layer: L.tileLayer('https://basemap.nationalmap.gov/arcgis/rest/services/USGSImageryTopo/MapServer/tile/{z}/{y}/{x}', {
-      maxZoom: 18, maxNativeZoom: 16, detectRetina: true, zIndex: 1, attribution: 'USGS The National Map' }) },
+      maxZoom: 18, maxNativeZoom: 16, zIndex: 1, attribution: 'USGS The National Map' }) },
     { key: 'sat', label: 'Satellite', layer: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
       maxZoom: 18, zIndex: 1, attribution: 'Esri, Maxar, Earthstar Geographics' }) }
   );
@@ -1294,7 +1294,7 @@
   function applyHash(h) {
     applying = true;
     if (h.c && h.z) map.setView(h.c, h.z);
-    if (h.b) setBase(h.b);
+    if (h.b && baseShown(h.b, prefs.units)) setBase(h.b);
     setSnowOpacity(h.o != null ? h.o : 80);
     setSnow(h.s || 'depth');
     applying = false;
